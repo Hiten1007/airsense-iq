@@ -291,23 +291,27 @@
       </div>
     </div>
 
-    <!-- 24-Hour Forecast Timeline Chart -->
+    <!-- 24-Hour Comparison & Forecast Timeline Chart -->
     <div class="glass-card rounded-3xl p-6 sm:p-8">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
-            24-Hour Predictive Trajectory Curve
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 font-normal">Multi-Step Inference</span>
+            24-Hour Trajectory: Real vs. Predicted
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 font-normal">Dual Telemetry</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-1">LightGBM Gradient Boosted regression model evaluated over local ECMWF atmospheric coordinates</p>
+          <p class="text-xs text-slate-400 mt-1">Comparing real ground truth against LightGBM machine learning predictions</p>
         </div>
 
-        <!-- Legend indicators -->
+        <!-- Dual line legend -->
         <div class="flex items-center gap-3 text-xs font-mono">
-          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span class="text-slate-400">Good</span></div>
-          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span class="text-slate-400">Moderate</span></div>
-          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span><span class="text-slate-400">Poor</span></div>
-          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span><span class="text-slate-400">Very Poor</span></div>
+          <div class="flex items-center gap-2 bg-sky-500/10 border border-sky-500/30 px-3 py-1.5 rounded-xl">
+            <span class="w-3 h-0.5 bg-sky-400"></span>
+            <span class="text-sky-300 font-semibold">Real Observed (Past)</span>
+          </div>
+          <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+            <span class="w-3 h-0.5 bg-emerald-400"></span>
+            <span class="text-slate-200 font-semibold">Model Forecast (24h)</span>
+          </div>
         </div>
       </div>
 
@@ -555,9 +559,22 @@
         const total = times.length;
         const startIdx = Math.max(0, total - 24);
 
+        const activeTz = aqRes.timezone || tz || "UTC";
+        let nowInTzStr = "";
+        try {
+          nowInTzStr = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: activeTz,
+            dateStyle: 'short',
+            timeStyle: 'short'
+          }).format(new Date());
+        } catch (e) {
+          nowInTzStr = new Date().toISOString().substring(0, 16).replace('T', ' ');
+        }
+
         const forecasts = [];
         for (let i = startIdx; i < total; i++) {
-          const val = pm25s[i] !== null ? pm25s[i] : 45.0;
+          const rawVal = pm25s[i];
+          const val = rawVal !== null ? rawVal : 45.0;
           let cat = "Good";
           if (val > 250) cat = "Severe";
           else if (val > 120) cat = "Very Poor";
@@ -565,9 +582,14 @@
           else if (val > 60) cat = "Moderate";
           else if (val > 30) cat = "Satisfactory";
 
+          const tStr = times[i].replace('T', ' ');
+          const isPast = (tStr <= nowInTzStr);
+          const observedVal = (isPast && rawVal !== null) ? Math.round(rawVal * 10) / 10 : null;
+
           forecasts.push({
-            timestamp: times[i].replace('T', ' '),
+            timestamp: tStr,
             predicted_pm2_5: Math.round(val * 10) / 10,
+            observed_pm2_5: observedVal,
             aqi_category: cat
           });
         }
@@ -686,7 +708,8 @@
         return f.timestamp;
       });
 
-      const values = forecasts.map(f => f.predicted_pm2_5);
+      const predictedValues = forecasts.map(f => f.predicted_pm2_5);
+      const observedValues = forecasts.map(f => (f.observed_pm2_5 !== undefined && f.observed_pm2_5 !== null) ? f.observed_pm2_5 : null);
 
       if (forecastChart) {
         forecastChart.destroy();
@@ -700,20 +723,39 @@
         type: 'line',
         data: {
           labels: labels,
-          datasets: [{
-            label: 'Predicted PM2.5 (µg/m³)',
-            data: values,
-            borderColor: theme.chartBorder,
-            borderWidth: 3,
-            backgroundColor: gradient,
-            fill: true,
-            tension: 0.42,
-            pointBackgroundColor: '#0F172A',
-            pointBorderColor: theme.chartBorder,
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-          }]
+          datasets: [
+            {
+              label: 'AirSense IQ Model Forecast',
+              data: predictedValues,
+              borderColor: theme.chartBorder,
+              borderWidth: 2.5,
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.38,
+              pointBackgroundColor: '#0F172A',
+              pointBorderColor: theme.chartBorder,
+              pointBorderWidth: 2,
+              pointRadius: 3.5,
+              pointHoverRadius: 6,
+              order: 2
+            },
+            {
+              label: 'Real Observed Ground Truth',
+              data: observedValues,
+              borderColor: '#38BDF8',
+              borderWidth: 3,
+              backgroundColor: 'transparent',
+              fill: false,
+              spanGaps: false,
+              tension: 0.38,
+              pointBackgroundColor: '#38BDF8',
+              pointBorderColor: '#0284C7',
+              pointBorderWidth: 2,
+              pointRadius: 4.5,
+              pointHoverRadius: 7,
+              order: 1
+            }
+          ]
         },
         options: {
           responsive: true,
@@ -725,23 +767,36 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#0F172A',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: '#0B1120',
+              borderColor: 'rgba(255, 255, 255, 0.12)',
               borderWidth: 1,
-              titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
-              bodyFont: { family: 'JetBrains Mono' },
+              titleFont: { family: 'Plus Jakarta Sans', weight: 'bold', size: 12 },
+              bodyFont: { family: 'JetBrains Mono', size: 11 },
               padding: 12,
-              displayColors: false,
+              displayColors: true,
               callbacks: {
+                title: function(items) {
+                  if (!items.length) return '';
+                  const idx = items[0].dataIndex;
+                  const item = forecasts[idx];
+                  const hasObs = (item.observed_pm2_5 !== null && item.observed_pm2_5 !== undefined);
+                  return `${item.timestamp} ${hasObs ? '• Ground Truth Recorded' : '• Forecast Horizon'}`;
+                },
                 label: function(context) {
-                  const val = context.parsed.y;
-                  let cat = "Good";
-                  if (val > 250) cat = "Severe";
-                  else if (val > 120) cat = "Very Poor";
-                  else if (val > 90) cat = "Poor";
-                  else if (val > 60) cat = "Moderate";
-                  else if (val > 30) cat = "Satisfactory";
-                  return ` ${val.toFixed(1)} µg/m³ • [${cat}]`;
+                  const idx = context.dataIndex;
+                  const item = forecasts[idx];
+                  if (context.datasetIndex === 0) {
+                    const val = item.predicted_pm2_5;
+                    return `  AirSense IQ: ${val.toFixed(1)} µg/m³ (${item.aqi_category || ''})`;
+                  } else if (context.datasetIndex === 1) {
+                    if (item.observed_pm2_5 !== null && item.observed_pm2_5 !== undefined) {
+                      const obs = item.observed_pm2_5;
+                      const diff = (item.predicted_pm2_5 - obs).toFixed(1);
+                      const sign = diff >= 0 ? `+${diff}` : `${diff}`;
+                      return `  Real Observed: ${obs.toFixed(1)} µg/m³ (Δ ${sign} µg)`;
+                    }
+                    return null;
+                  }
                 }
               }
             }
@@ -765,6 +820,8 @@
     }
 
     function selectCity(cityName, lat, lon) {
+      const suggestionsBox = document.getElementById('search-suggestions');
+      if (suggestionsBox) suggestionsBox.classList.add('hidden');
       document.querySelectorAll('.city-pill').forEach(btn => {
         if (btn.innerText.trim().toLowerCase() === cityName.toLowerCase()) {
           btn.className = "city-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition-all";
@@ -830,10 +887,10 @@
         } catch (err) {
           console.warn("Geocoding autocomplete failed:", err);
         }
-      }, 200);
+      }, 280);
     }
 
-    // Close autocomplete on click outside
+    // Close autocomplete on click outside or Escape
     document.addEventListener('click', (e) => {
       const suggestionsBox = document.getElementById('search-suggestions');
       const input = document.getElementById('city-input');
@@ -842,16 +899,24 @@
       }
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const suggestionsBox = document.getElementById('search-suggestions');
+        if (suggestionsBox) suggestionsBox.classList.add('hidden');
+      }
+    });
+
     function handleSearch(e) {
       e.preventDefault();
       const input = document.getElementById('city-input');
+      const suggestionsBox = document.getElementById('search-suggestions');
+      if (suggestionsBox) suggestionsBox.classList.add('hidden');
       const val = input.value.trim();
       if (val) {
         document.querySelectorAll('.city-pill').forEach(btn => {
           btn.className = "city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all";
         });
         fetchForecast(val);
-        input.value = '';
       }
     }
 

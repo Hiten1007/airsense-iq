@@ -33,6 +33,7 @@ app.add_middleware(
 class AQIPredictionItem(BaseModel):
     timestamp: str
     predicted_pm2_5: float
+    observed_pm2_5: Optional[float] = None
     aqi_category: str
 
 
