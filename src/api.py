@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 
 app = FastAPI(
-    title="AeroCast Air Quality (AQI) CI/CD & MLOps Service",
+    title="AirSense IQ Air Quality (AQI) CI/CD & MLOps Service",
     description="Production-grade geospatial air quality forecasting service powered by LightGBM and ECMWF reanalysis.",
     version="1.0.0"
 )
@@ -46,7 +46,7 @@ class HealthResponse(BaseModel):
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def serve_dashboard():
-    """Serve the interactive AeroCast Geospatial Dashboard."""
+    """Serve the interactive AirSense IQ Geospatial Dashboard."""
     template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "index.html")
     if os.path.exists(template_path):
         with open(template_path, "r", encoding="utf-8") as f:
@@ -105,11 +105,12 @@ def get_live_24h_forecast(
             weather_url = "https://api.open-meteo.com/v1/forecast"
             tz = "auto"
 
-            try:
-                import truststore
-                truststore.inject_into_ssl()
-            except ImportError:
-                pass
+            if sys.platform == "win32":
+                try:
+                    import truststore
+                    truststore.inject_into_ssl()
+                except ImportError:
+                    pass
 
             aq_resp = requests.get(aq_url, params={
                 "latitude": lat, "longitude": lon,

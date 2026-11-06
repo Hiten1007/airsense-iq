@@ -29,11 +29,15 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set lower case repository name
+      run: |
+        echo "REPO_LOWER=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: actions/docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}/aqi-predictor
+        images: ghcr.io/${{ env.REPO_LOWER }}/aqi-predictor
         tags: |
           type=raw,value=latest
           type=sha

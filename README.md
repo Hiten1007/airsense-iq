@@ -1,4 +1,4 @@
-# 🌍 AeroCast • Planetary Air Quality CI/CD & MLOps Platform
+# 🌍 AirSense IQ • Planetary Air Quality CI/CD & MLOps Platform
 
 [![CI - Lint & Unit Tests](https://github.com/Hiten1007/airsense-iq/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/ci.yml)
 [![CT - Automated Retraining](https://github.com/Hiten1007/airsense-iq/actions/workflows/ct.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/ct.yml)

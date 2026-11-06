@@ -9,7 +9,7 @@ def test_dashboard_endpoint():
     """Verify that GET / returns the vibrant HTML dashboard."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "AeroCast" in response.text
+    assert "AirSense" in response.text
     assert "<!DOCTYPE html>" in response.text
 
 

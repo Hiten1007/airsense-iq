@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AeroCast • Planetary Air Quality Intelligence & MLOps</title>
+  <title>AirSense IQ • Urban Air Quality Intelligence & MLOps</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -116,7 +116,7 @@
         </div>
         <div>
           <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
-            Aero<span class="text-emerald-400">Cast</span>
+            AirSense <span class="text-emerald-400">IQ</span>
             <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-widest font-semibold ml-1">Geospatial MLOps</span>
           </span>
         </div>
@@ -340,7 +340,7 @@
   <!-- Footer -->
   <footer class="border-t border-white/5 py-8 mt-12 bg-black/50 text-center text-xs text-slate-500 font-mono">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div>AeroCast MLOps Pipeline • Leaflet Maps & Open-Meteo Integration</div>
+      <div>AirSense IQ MLOps Pipeline • Leaflet Maps & Open-Meteo Integration</div>
       <div class="flex items-center gap-4">
         <span>R²: 0.9717</span>
         <span>•</span>
@@ -437,10 +437,15 @@
         attributionControl: false
       });
 
-      // CartoDB Dark Matter Tiles (stunning dark mode)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd',
+      // High-performance ESRI Dark Gray Canvas (100% Free, Zero API Key, No Watermarks)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        attribution: '&copy; Esri'
+      }).addTo(map);
+
+      // City & Country Labels Overlay
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16
       }).addTo(map);
 
       // Add preset city pins

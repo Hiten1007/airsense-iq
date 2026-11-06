@@ -123,58 +123,81 @@ def generate_live_forecast(
     }
 
     logger.info(f"Fetching real-time conditions for {city_info['name']} ({city_info['latitude']}, {city_info['longitude']})...")
+    if sys.platform == "win32":
+        try:
+            import truststore
+            truststore.inject_into_ssl()
+        except ImportError:
+            pass
+
     try:
-        import truststore
-        truststore.inject_into_ssl()
-    except ImportError:
-        pass
+        aq_res = requests.get(aq_url, params=aq_params, timeout=15)
+        aq_res.raise_for_status()
+        aq_resp = aq_res.json()
 
-    aq_resp = requests.get(aq_url, params=aq_params, timeout=20).json()
-    weather_resp = requests.get(weather_url, params=weather_params, timeout=20).json()
+        weather_res = requests.get(weather_url, params=weather_params, timeout=15)
+        weather_res.raise_for_status()
+        weather_resp = weather_res.json()
 
-    aq_df = pd.DataFrame(aq_resp["hourly"])
-    weather_df = pd.DataFrame(weather_resp["hourly"])
+        if "hourly" not in aq_resp or "hourly" not in weather_resp:
+            raise ValueError(f"Incomplete hourly payload from Open-Meteo: aq={aq_resp.get('error')}, weather={weather_resp.get('error')}")
 
-    merged = pd.merge(aq_df, weather_df, on="time", how="inner")
-    merged["time"] = pd.to_datetime(merged["time"])
+        aq_df = pd.DataFrame(aq_resp["hourly"])
+        weather_df = pd.DataFrame(weather_resp["hourly"])
 
-    # Extract current weather conditions (latest timestamp)
-    latest_row = merged.iloc[-25] if len(merged) >= 25 else merged.iloc[-1]
-    current_metrics = {
-        "temperature_2m": float(latest_row.get("temperature_2m", 0.0)),
-        "relative_humidity_2m": float(latest_row.get("relative_humidity_2m", 0.0)),
-        "wind_speed_10m": float(latest_row.get("wind_speed_10m", 0.0)),
-        "wind_direction_10m": float(latest_row.get("wind_direction_10m", 0.0)),
-        "surface_pressure": float(latest_row.get("surface_pressure", 0.0)),
-        "pm10": float(latest_row.get("pm10", 0.0)),
-        "nitrogen_dioxide": float(latest_row.get("nitrogen_dioxide", 0.0)),
-        "ozone": float(latest_row.get("ozone", 0.0)),
-        "carbon_monoxide": float(latest_row.get("carbon_monoxide", 0.0)),
-    }
+        merged = pd.merge(aq_df, weather_df, on="time", how="inner")
+        merged["time"] = pd.to_datetime(merged["time"])
 
-    predictions = predict_from_dataframe(merged, config_path)
-    forecast_24h = predictions[-24:]
+        # Extract current weather conditions (latest timestamp)
+        latest_row = merged.iloc[-25] if len(merged) >= 25 else merged.iloc[-1]
+        current_metrics = {
+            "temperature_2m": float(latest_row.get("temperature_2m", 0.0)),
+            "relative_humidity_2m": float(latest_row.get("relative_humidity_2m", 0.0)),
+            "wind_speed_10m": float(latest_row.get("wind_speed_10m", 0.0)),
+            "wind_direction_10m": float(latest_row.get("wind_direction_10m", 0.0)),
+            "surface_pressure": float(latest_row.get("surface_pressure", 0.0)),
+            "pm10": float(latest_row.get("pm10", 0.0)),
+            "nitrogen_dioxide": float(latest_row.get("nitrogen_dioxide", 0.0)),
+            "ozone": float(latest_row.get("ozone", 0.0)),
+            "carbon_monoxide": float(latest_row.get("carbon_monoxide", 0.0)),
+        }
 
-    payload = {
-        "city": city_info["name"],
-        "country": city_info.get("country", ""),
-        "latitude": city_info["latitude"],
-        "longitude": city_info["longitude"],
-        "timezone": city_info.get("timezone", "UTC"),
-        "generated_at": datetime.now().isoformat(),
-        "current_weather": current_metrics,
-        "forecasts": forecast_24h
-    }
+        predictions = predict_from_dataframe(merged, config_path)
+        forecast_24h = predictions[-24:]
 
-    # Cache default city prediction if not custom city
-    if not city_name or city_name.lower() == config["city"]["name"].lower():
-        out_path = config.get("serving", {}).get("predictions_output_path", "data/latest_predictions.json")
-        os.makedirs(os.path.dirname(out_path), exist_ok=True)
-        with open(out_path, "w") as f:
-            json.dump(payload, f, indent=2)
+        payload = {
+            "city": city_info["name"],
+            "country": city_info.get("country", ""),
+            "latitude": city_info["latitude"],
+            "longitude": city_info["longitude"],
+            "timezone": city_info.get("timezone", "UTC"),
+            "generated_at": datetime.now().isoformat(),
+            "current_weather": current_metrics,
+            "forecasts": forecast_24h
+        }
 
-    logger.info(f"Live forecast generated for {city_info['name']}")
-    return payload
+        # Cache default city prediction if not custom city
+        if not city_name or city_name.lower() == config["city"]["name"].lower():
+            out_path = config.get("serving", {}).get("predictions_output_path", "data/latest_predictions.json")
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            with open(out_path, "w") as f:
+                json.dump(payload, f, indent=2)
+
+        logger.info(f"Live forecast generated for {city_info['name']}")
+        return payload
+
+    except Exception as e:
+        logger.warning(f"Live API query failed ({e}). Checking for cached payload fallback...")
+        cached_path = config.get("serving", {}).get("predictions_output_path", "data/latest_predictions.json")
+        if os.path.exists(cached_path):
+            with open(cached_path, "r") as f:
+                cached_data = json.load(f)
+                cached_data["city"] = city_info["name"]
+                cached_data["country"] = city_info.get("country", "")
+                cached_data["latitude"] = city_info["latitude"]
+                cached_data["longitude"] = city_info["longitude"]
+                return cached_data
+        raise e
 
 
 if __name__ == "__main__":

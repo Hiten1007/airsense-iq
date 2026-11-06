@@ -3,10 +3,6 @@ name: Deploy Interactive Dashboard to GitHub Pages
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - "docs/**"
-      - "templates/**"
-      - "src/generate_static_page.py"
   workflow_dispatch:
 
 permissions:

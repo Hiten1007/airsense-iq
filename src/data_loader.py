@@ -11,11 +11,12 @@ import requests
 import pandas as pd
 import yaml
 
-try:
-    import truststore
-    truststore.inject_into_ssl()
-except ImportError:
-    pass
+if sys.platform == "win32":
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+    except ImportError:
+        pass
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
