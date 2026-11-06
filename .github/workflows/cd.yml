@@ -11,6 +11,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Checkout Repository
@@ -44,7 +47,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
 
     - name: Deployment Hook (e.g., Render / Hugging Face Spaces webhook)
-      if: env.DEPLOY_HOOK_URL != ''
+      if: ${{ secrets.DEPLOY_HOOK_URL != '' }}
       env:
         DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
       run: |

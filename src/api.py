@@ -44,7 +44,7 @@ class HealthResponse(BaseModel):
     champion_metrics: Optional[Dict[str, Any]] = None
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def serve_dashboard():
     """Serve the interactive AeroCast Geospatial Dashboard."""
     template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "index.html")
@@ -54,7 +54,7 @@ def serve_dashboard():
     return HTMLResponse(content="<h1>Dashboard template not found</h1>", status_code=404)
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse)
 def health_check():
     """Health check and model status verification for Docker & cloud orchestrators."""
     config = load_config()
