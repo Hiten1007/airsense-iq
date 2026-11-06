@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code, config, templates, and champion model
+# Copy source code, config, templates, fallback data, and champion model
 COPY src/ /app/src/
 COPY config/ /app/config/
 COPY templates/ /app/templates/
+COPY data/latest_predictions.json /app/data/latest_predictions.json
 COPY models/champion/ /app/models/champion/
 COPY models/feature_names.json /app/models/feature_names.json
 

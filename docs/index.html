@@ -156,12 +156,20 @@
         <button onclick="selectCity('Tokyo', 35.6762, 139.6503)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">Tokyo</button>
       </div>
 
-      <!-- Live Global Search Input -->
-      <form onsubmit="handleSearch(event)" class="relative w-full md:w-84">
-        <input id="city-input" type="text" placeholder="Search any city on Earth..." class="w-full pl-10 pr-24 py-2.5 bg-black/40 border border-white/10 rounded-2xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-all font-sans" />
-        <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <button type="submit" class="absolute right-1.5 top-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-black text-xs font-extrabold rounded-xl hover:opacity-90 transition-all">Locate</button>
-      </form>
+      <!-- Live Global Search with Autocomplete Dropdown -->
+      <div class="relative w-full md:w-96">
+        <form onsubmit="handleSearch(event)" class="relative">
+          <input id="city-input" type="text" autocomplete="off" placeholder="Search any city (e.g. Bareilly, Munich, Kyoto)..." 
+                 oninput="handleSearchInput(event)"
+                 class="w-full pl-10 pr-20 py-2.5 bg-black/40 border border-white/10 rounded-2xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-all font-sans" />
+          <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <button type="submit" class="absolute right-1.5 top-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-black text-xs font-extrabold rounded-xl hover:opacity-90 transition-all">Locate</button>
+        </form>
+
+        <!-- Glassmorphic Autocomplete Suggestions -->
+        <div id="search-suggestions" class="hidden absolute top-12 left-0 right-0 z-50 glass-card rounded-2xl p-1.5 shadow-2xl border border-white/15 space-y-1 max-h-64 overflow-y-auto backdrop-blur-xl bg-[#0B132B]/95">
+        </div>
+      </div>
     </div>
 
     <!-- Interactive Global Map & Live Telemetry Layout -->
@@ -514,9 +522,26 @@
       }
     }
 
-    async function fetchDirectByCoords(lat, lon, cityName = null, country = "Earth", tz = "UTC") {
+    async function fetchDirectByCoords(lat, lon, cityName = null, countryName = null, tz = "UTC") {
       try {
-        const name = cityName || `Loc (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+        let name = cityName;
+        let country = countryName;
+
+        // Auto reverse-geocode if clicked directly on map without city name
+        if (!name) {
+          try {
+            const revRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+            const revData = await revRes.json();
+            name = revData.city || revData.locality || revData.principalSubdivision || `Coord (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+            const region = revData.principalSubdivision || "";
+            const cName = revData.countryName || "";
+            country = (region && region !== name) ? `${region}, ${cName}` : (cName || "Earth");
+          } catch (e) {
+            name = `Coord (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+            country = "Earth";
+          }
+        }
+
         const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm2_5,pm10,nitrogen_dioxide,ozone,carbon_monoxide&past_days=1&forecast_days=1&timezone=auto`;
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&past_days=1&forecast_days=1&timezone=auto`;
 
@@ -753,6 +778,69 @@
       }
       fetchForecast(cityName);
     }
+
+    let searchDebounceTimer = null;
+
+    async function handleSearchInput(e) {
+      const query = e.target.value.trim();
+      const suggestionsBox = document.getElementById('search-suggestions');
+
+      clearTimeout(searchDebounceTimer);
+      if (query.length < 2) {
+        suggestionsBox.classList.add('hidden');
+        suggestionsBox.innerHTML = '';
+        return;
+      }
+
+      searchDebounceTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`);
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            suggestionsBox.innerHTML = '';
+            data.results.forEach(item => {
+              const region = item.admin1 ? `${item.admin1}, ` : '';
+              const country = item.country || '';
+              const div = document.createElement('div');
+              div.className = "flex items-center justify-between p-2.5 rounded-xl hover:bg-emerald-500/20 hover:text-emerald-300 text-xs cursor-pointer transition-all border border-transparent hover:border-emerald-500/30";
+              div.innerHTML = `
+                <div class="flex items-center gap-2">
+                  <span class="text-emerald-400">📍</span>
+                  <div>
+                    <strong class="text-white block font-semibold">${item.name}</strong>
+                    <span class="text-[10px] text-slate-400">${region}${country}</span>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${item.latitude.toFixed(2)}, ${item.longitude.toFixed(2)}</span>
+              `;
+              div.onclick = () => {
+                suggestionsBox.classList.add('hidden');
+                document.getElementById('city-input').value = `${item.name}, ${country}`;
+                if (map) {
+                  map.flyTo([item.latitude, item.longitude], 8, { duration: 1.5 });
+                }
+                fetchDirectByCoords(item.latitude, item.longitude, item.name, `${region}${country}`, item.timezone);
+              };
+              suggestionsBox.appendChild(div);
+            });
+            suggestionsBox.classList.remove('hidden');
+          } else {
+            suggestionsBox.classList.add('hidden');
+          }
+        } catch (err) {
+          console.warn("Geocoding autocomplete failed:", err);
+        }
+      }, 200);
+    }
+
+    // Close autocomplete on click outside
+    document.addEventListener('click', (e) => {
+      const suggestionsBox = document.getElementById('search-suggestions');
+      const input = document.getElementById('city-input');
+      if (suggestionsBox && !suggestionsBox.contains(e.target) && e.target !== input) {
+        suggestionsBox.classList.add('hidden');
+      }
+    });
 
     function handleSearch(e) {
       e.preventDefault();

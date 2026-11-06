@@ -107,8 +107,20 @@ def get_live_24h_forecast(
 
         # If custom coordinates provided directly via map click
         if lat is not None and lon is not None:
-            # Query reverse geocode / elevation name if possible
             city_name = f"Loc ({lat:.2f}, {lon:.2f})"
+            country_name = "Earth"
+            try:
+                rev_url = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=en"
+                rev_resp = requests.get(rev_url, timeout=4).json()
+                resolved_city = rev_resp.get("city") or rev_resp.get("locality") or rev_resp.get("principalSubdivision")
+                if resolved_city:
+                    city_name = resolved_city
+                subdiv = rev_resp.get("principalSubdivision")
+                c_name = rev_resp.get("countryName") or ""
+                country_name = f"{subdiv}, {c_name}" if subdiv and subdiv != city_name else c_name or "Earth"
+            except Exception:
+                pass
+
             data_cfg = config["data"]
 
             aq_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
@@ -156,7 +168,7 @@ def get_live_24h_forecast(
             from datetime import datetime
             return {
                 "city": city_name,
-                "country": "Custom Map Point",
+                "country": country_name,
                 "latitude": lat,
                 "longitude": lon,
                 "timezone": aq_resp.get("timezone", "UTC"),
