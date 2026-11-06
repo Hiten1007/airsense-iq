@@ -1,9 +1,9 @@
 # 🌍 AeroCast • Planetary Air Quality CI/CD & MLOps Platform
 
-[![CI - Lint & Unit Tests](https://github.com/your-username/aqi-predict/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/aqi-predict/actions/workflows/ci.yml)
-[![CT - Automated Retraining](https://github.com/your-username/aqi-predict/actions/workflows/ct.yml/badge.svg)](https://github.com/your-username/aqi-predict/actions/workflows/ct.yml)
-[![CD - Package & Deploy](https://github.com/your-username/aqi-predict/actions/workflows/cd.yml/badge.svg)](https://github.com/your-username/aqi-predict/actions/workflows/cd.yml)
-[![Pages - Live Map Dashboard](https://github.com/your-username/aqi-predict/actions/workflows/pages.yml/badge.svg)](https://github.com/your-username/aqi-predict/actions/workflows/pages.yml)
+[![CI - Lint & Unit Tests](https://github.com/Hiten1007/airsense-iq/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/ci.yml)
+[![CT - Automated Retraining](https://github.com/Hiten1007/airsense-iq/actions/workflows/ct.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/ct.yml)
+[![CD - Package & Deploy](https://github.com/Hiten1007/airsense-iq/actions/workflows/cd.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/cd.yml)
+[![Pages - Live Map Dashboard](https://github.com/Hiten1007/airsense-iq/actions/workflows/pages.yml/badge.svg)](https://github.com/Hiten1007/airsense-iq/actions/workflows/pages.yml)
 
 An enterprise-grade, end-to-end MLOps system that forecasts urban Air Quality Index (AQI) and PM2.5 levels using atmospheric physics and machine learning. Featuring **Continuous Integration (CI)**, **Continuous Training (CT)** with automated Champion vs. Challenger quality gating, **Continuous Deployment (CD)** via Docker and FastAPI, and a **Geospatial Interactive Radar Map Dashboard** deployable to **GitHub Pages**.
 
@@ -153,4 +153,4 @@ pytest -v tests/
    - Go to **Settings > Pages**.
    - Under **Build and deployment > Source**, choose **GitHub Actions**.
 3. The included `.github/workflows/pages.yml` workflow will automatically trigger, build the static site, and publish it to:
-   👉 `https://<your-username>.github.io/<repo-name>/`
+   👉 `https://Hiten1007.github.io/airsense-iq/`
