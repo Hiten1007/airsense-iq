@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroCast • Planetary Air Quality Intelligence & MLOps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            night: {
+              950: '#030712',
+              900: '#080D1A',
+              800: '#0F172A',
+              700: '#1E293B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #040814;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 45%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 45%),
+        radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    /* Leaflet Dark Theme Overrides */
+    .leaflet-container {
+      background: #090e1a !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.95) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #fff !important;
+      border-radius: 14px !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+    }
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.95) !important;
+    }
+    .leaflet-control-zoom a {
+      background: rgba(15, 23, 42, 0.85) !important;
+      color: #94A3B8 !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: rgba(30, 41, 59, 1) !important;
+      color: #fff !important;
+    }
+    /* Pulsing Map Pin */
+    .pulse-marker {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 0 15px currentColor;
+    }
+    .pulse-marker::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: -3px;
+      left: -3px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      animation: ripple 2s infinite ease-out;
+    }
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(3.2); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen font-sans antialiased selection:bg-emerald-500 selection:text-black">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-white/5 backdrop-blur-md sticky top-0 z-50 bg-[#040814]/85">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+          <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+            Aero<span class="text-emerald-400">Cast</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-widest font-semibold ml-1">Geospatial MLOps</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Right Metadata Badges -->
+      <div class="flex items-center space-x-3 text-xs font-mono">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Verified Champion Gate: <strong class="text-emerald-400 font-bold">R² 0.9717</strong></span>
+        </div>
+        <a href="/docs" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 transition-all font-semibold flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
+          <span>Swagger API</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- City Search & Fast Preset Selector -->
+    <div class="glass-card rounded-3xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <!-- Quick City Pills -->
+      <div class="flex items-center gap-2 flex-wrap w-full md:w-auto">
+        <span class="text-xs uppercase font-mono tracking-wider text-slate-400 mr-1 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          Pinned Hubs:
+        </span>
+        <button onclick="selectCity('Delhi', 28.6139, 77.2090)" class="city-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition-all">Delhi</button>
+        <button onclick="selectCity('Mumbai', 19.0728, 72.8826)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">Mumbai</button>
+        <button onclick="selectCity('Bengaluru', 12.9716, 77.5946)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">Bengaluru</button>
+        <button onclick="selectCity('London', 51.5074, -0.1278)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">London</button>
+        <button onclick="selectCity('New York', 40.7128, -74.0060)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">New York</button>
+        <button onclick="selectCity('Tokyo', 35.6762, 139.6503)" class="city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all">Tokyo</button>
+      </div>
+
+      <!-- Live Global Search Input -->
+      <form onsubmit="handleSearch(event)" class="relative w-full md:w-84">
+        <input id="city-input" type="text" placeholder="Search any city on Earth..." class="w-full pl-10 pr-24 py-2.5 bg-black/40 border border-white/10 rounded-2xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-all font-sans" />
+        <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <button type="submit" class="absolute right-1.5 top-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-black text-xs font-extrabold rounded-xl hover:opacity-90 transition-all">Locate</button>
+      </form>
+    </div>
+
+    <!-- Interactive Global Map & Live Telemetry Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      
+      <!-- Interactive Leaflet Map Card (Col 7) -->
+      <div class="lg:col-span-7 glass-card rounded-3xl p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden min-h-[420px]">
+        <div class="flex items-center justify-between mb-3 z-10">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+            <h2 class="text-sm font-bold text-white tracking-wide uppercase font-mono">Geospatial Air Quality Radar</h2>
+          </div>
+          <span class="text-[11px] font-mono text-slate-400 px-2.5 py-0.5 rounded-full bg-black/40 border border-white/5">Click map to fly & inspect</span>
+        </div>
+
+        <!-- The Leaflet Map Container -->
+        <div id="map" class="w-full flex-1 rounded-2xl overflow-hidden border border-white/10 shadow-inner z-0 min-h-[340px]"></div>
+
+        <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span id="map-coords">Lat: 28.6139 • Lon: 77.2090</span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Atmospheric Feed
+          </span>
+        </div>
+      </div>
+
+      <!-- Hero AQI Telemetry & Health Impact (Col 5) -->
+      <div id="hero-card" class="lg:col-span-5 glass-card rounded-3xl p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+        <div id="hero-glow" class="absolute -right-20 -top-20 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none bg-emerald-500 transition-all duration-700"></div>
+
+        <div class="space-y-4 relative z-10">
+          <!-- City Title -->
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 id="city-name" class="text-3xl font-extrabold tracking-tight text-white">Delhi</h1>
+                <span id="country-name" class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300">India</span>
+              </div>
+              <span id="timezone-badge" class="text-xs font-mono text-slate-400 mt-0.5 block">Timezone: Asia/Kolkata</span>
+            </div>
+            
+            <span id="aqi-category-badge" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm">
+              Loading...
+            </span>
+          </div>
+
+          <!-- Main PM2.5 Readout -->
+          <div class="pt-2">
+            <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 block">Next-Hour Predicted &mu;g/m&sup3; PM<sub>2.5</sub></span>
+            <div class="flex items-baseline gap-3 mt-1">
+              <span id="current-pm25" class="text-6xl sm:text-7xl font-extrabold font-mono tracking-tighter text-white">--</span>
+              <span class="text-sm font-mono text-slate-400">&mu;g/m&sup3;</span>
+            </div>
+          </div>
+
+          <!-- Health Advisory Box -->
+          <div id="health-advisory-box" class="p-4 rounded-2xl bg-white/5 border border-white/5 text-xs text-slate-300 leading-relaxed space-y-1">
+            <strong class="text-white block font-semibold text-sm" id="advisory-title">Health Advisory</strong>
+            <p id="advisory-text" class="text-slate-300">Synchronizing atmospheric chemistry and wind models...</p>
+          </div>
+        </div>
+
+        <!-- Weather Mini Metrics in Hero -->
+        <div class="grid grid-cols-3 gap-2.5 pt-4 border-t border-white/5 mt-4 relative z-10 text-center">
+          <div class="bg-black/30 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-mono uppercase text-slate-400 block">Temp</span>
+            <span class="text-base font-mono font-bold text-white" id="weather-temp">--°C</span>
+          </div>
+          <div class="bg-black/30 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-mono uppercase text-slate-400 block">Humidity</span>
+            <span class="text-base font-mono font-bold text-white" id="weather-humidity">--%</span>
+          </div>
+          <div class="bg-black/30 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-mono uppercase text-slate-400 block">Wind Speed</span>
+            <span class="text-base font-mono font-bold text-white" id="weather-wind">-- km/h</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Atmospheric Physics & Secondary Pollutants Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">Ventilation Index</span>
+        <div class="text-xl font-mono font-bold text-cyan-400 mt-1" id="weather-ventilation">--</div>
+        <span class="text-[9px] text-slate-500">Dispersion Proxy</span>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">Wind Direction</span>
+        <div class="text-xl font-mono font-bold text-white mt-1" id="weather-wind-dir">--°</div>
+        <span class="text-[9px] text-slate-500">Azimuth Angle</span>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">PM10 Level</span>
+        <div class="text-xl font-mono font-bold text-white mt-1" id="pollutant-pm10">--</div>
+        <span class="text-[9px] text-slate-500">Coarse Particles</span>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">Nitrogen Dioxide (NO₂)</span>
+        <div class="text-xl font-mono font-bold text-white mt-1" id="pollutant-no2">--</div>
+        <span class="text-[9px] text-slate-500">Vehicle Exhaust</span>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">Ozone (O₃)</span>
+        <div class="text-xl font-mono font-bold text-white mt-1" id="pollutant-o3">--</div>
+        <span class="text-[9px] text-slate-500">Photochemical</span>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4">
+        <span class="text-[10px] font-mono uppercase text-slate-400 block">Carbon Monoxide</span>
+        <div class="text-xl font-mono font-bold text-white mt-1" id="pollutant-co">--</div>
+        <span class="text-[9px] text-slate-500">Combustion Tracer</span>
+      </div>
+    </div>
+
+    <!-- 24-Hour Forecast Timeline Chart -->
+    <div class="glass-card rounded-3xl p-6 sm:p-8">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            24-Hour Predictive Trajectory Curve
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 font-normal">Multi-Step Inference</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">LightGBM Gradient Boosted regression model evaluated over local ECMWF atmospheric coordinates</p>
+        </div>
+
+        <!-- Legend indicators -->
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span class="text-slate-400">Good</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span class="text-slate-400">Moderate</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span><span class="text-slate-400">Poor</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span><span class="text-slate-400">Very Poor</span></div>
+        </div>
+      </div>
+
+      <!-- Canvas for Chart.js -->
+      <div class="relative w-full h-[320px]">
+        <canvas id="forecastChart"></canvas>
+      </div>
+    </div>
+
+    <!-- MLOps Pipeline Architecture Badges -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-emerald-500">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono uppercase text-emerald-400 font-semibold">Continuous Training (CT)</span>
+          <span class="text-xs font-mono text-slate-500">Weekly Cron</span>
+        </div>
+        <p class="text-sm text-slate-300">Automated Champion vs. Challenger gate tests each candidate model on a 30-day temporal holdout before promotion.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-cyan-500">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono uppercase text-cyan-400 font-semibold">Continuous Integration (CI)</span>
+          <span class="text-xs font-mono text-slate-500">Pytest 10/10</span>
+        </div>
+        <p class="text-sm text-slate-300">Guarantees zero data leakage in lag features, validates meteorological vector equations, and tests API schemas.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-purple-500">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono uppercase text-purple-400 font-semibold">Deployment Engine (CD)</span>
+          <span class="text-xs font-mono text-slate-500">GHCR Docker</span>
+        </div>
+        <p class="text-sm text-slate-300">FastAPI async server packaged with healthy image tags and ready for rolling zero-downtime deployment.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-8 mt-12 bg-black/50 text-center text-xs text-slate-500 font-mono">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>AeroCast MLOps Pipeline • Leaflet Maps & Open-Meteo Integration</div>
+      <div class="flex items-center gap-4">
+        <span>R²: 0.9717</span>
+        <span>•</span>
+        <span>RMSE: 5.65 &mu;g/m&sup3;</span>
+        <span>•</span>
+        <a href="/docs" class="text-emerald-400 hover:underline">Swagger Docs</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let forecastChart = null;
+    let map = null;
+    let currentMarker = null;
+
+    const PRESET_LOCATIONS = [
+      { name: "Delhi", lat: 28.6139, lon: 77.2090 },
+      { name: "Mumbai", lat: 19.0728, lon: 72.8826 },
+      { name: "Bengaluru", lat: 12.9716, lon: 77.5946 },
+      { name: "London", lat: 51.5074, lon: -0.1278 },
+      { name: "New York", lat: 40.7128, lon: -74.0060 },
+      { name: "Tokyo", lat: 35.6762, lon: 139.6503 }
+    ];
+
+    const AQI_THEMES = {
+      "Good": {
+        color: "#10B981",
+        badgeBg: "bg-emerald-500/20",
+        badgeText: "text-emerald-400",
+        badgeBorder: "border-emerald-500/40",
+        chartBorder: "#10B981",
+        chartFill: "rgba(16, 185, 129, 0.15)",
+        advisoryTitle: "Optimal Air Quality",
+        advisoryText: "Air pollution poses little or no risk. Great time for outdoor exercise, jogging, and ventilation."
+      },
+      "Satisfactory": {
+        color: "#06B6D4",
+        badgeBg: "bg-cyan-500/20",
+        badgeText: "text-cyan-400",
+        badgeBorder: "border-cyan-500/40",
+        chartBorder: "#06B6D4",
+        chartFill: "rgba(6, 182, 212, 0.15)",
+        advisoryTitle: "Minor Discomfort for Sensitive Groups",
+        advisoryText: "Air quality is acceptable. Extremely sensitive individuals may experience mild respiratory symptoms."
+      },
+      "Moderate": {
+        color: "#F59E0B",
+        badgeBg: "bg-amber-500/20",
+        badgeText: "text-amber-400",
+        badgeBorder: "border-amber-500/40",
+        chartBorder: "#F59E0B",
+        chartFill: "rgba(245, 158, 11, 0.15)",
+        advisoryTitle: "Caution for Children and Elderly",
+        advisoryText: "May cause breathing discomfort to people with lung disease, asthma, and heart conditions upon prolonged exposure."
+      },
+      "Poor": {
+        color: "#F97316",
+        badgeBg: "bg-orange-500/20",
+        badgeText: "text-orange-400",
+        badgeBorder: "border-orange-500/40",
+        chartBorder: "#F97316",
+        chartFill: "rgba(249, 115, 22, 0.15)",
+        advisoryTitle: "Unhealthy for General Public",
+        advisoryText: "Breathing discomfort to most people on prolonged exposure. Avoid strenuous outdoor activities."
+      },
+      "Very Poor": {
+        color: "#EF4444",
+        badgeBg: "bg-red-500/20",
+        badgeText: "text-red-400",
+        badgeBorder: "border-red-500/40",
+        chartBorder: "#EF4444",
+        chartFill: "rgba(239, 68, 68, 0.15)",
+        advisoryTitle: "Severe Respiratory Warning",
+        advisoryText: "Significant respiratory illness on prolonged exposure. Sensitive groups should remain indoors with air purifiers."
+      },
+      "Severe": {
+        color: "#8B5CF6",
+        badgeBg: "bg-purple-500/20",
+        badgeText: "text-purple-400",
+        badgeBorder: "border-purple-500/40",
+        chartBorder: "#8B5CF6",
+        chartFill: "rgba(139, 92, 246, 0.2)",
+        advisoryTitle: "Emergency Smog Advisory",
+        advisoryText: "Affects healthy people and seriously impacts those with existing diseases. Avoid all outdoor activities."
+      }
+    };
+
+    function initMap() {
+      // Initialize Leaflet map
+      map = L.map('map', {
+        center: [28.6139, 77.2090],
+        zoom: 5,
+        zoomControl: true,
+        attributionControl: false
+      });
+
+      // CartoDB Dark Matter Tiles (stunning dark mode)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      }).addTo(map);
+
+      // Add preset city pins
+      PRESET_LOCATIONS.forEach(loc => {
+        const pin = L.circleMarker([loc.lat, loc.lon], {
+          radius: 7,
+          fillColor: '#10B981',
+          color: '#ffffff',
+          weight: 2,
+          opacity: 0.9,
+          fillOpacity: 0.8
+        }).addTo(map);
+
+        pin.bindTooltip(`<b>${loc.name}</b>`, {
+          permanent: false,
+          direction: 'top',
+          className: 'glass-card'
+        });
+
+        pin.on('click', () => {
+          selectCity(loc.name, loc.lat, loc.lon);
+        });
+      });
+
+      // Map click handler: allows clicking anywhere on the globe to predict!
+      map.on('click', async (e) => {
+        const { lat, lng } = e.latlng;
+        document.getElementById('map-coords').innerText = `Lat: ${lat.toFixed(4)} • Lon: ${lng.toFixed(4)}`;
+        fetchForecastByCoords(lat, lng);
+      });
+    }
+
+    async function fetchForecast(cityName = "Delhi") {
+      try {
+        const response = await fetch(`/forecast/next24h?city=${encodeURIComponent(cityName)}`);
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        const data = await response.json();
+        renderDashboard(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function fetchForecastByCoords(lat, lon) {
+      try {
+        const response = await fetch(`/forecast/next24h?lat=${lat}&lon=${lon}`);
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        const data = await response.json();
+        renderDashboard(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderDashboard(data) {
+      // 1. City and Region
+      document.getElementById('city-name').innerText = data.city || "Custom Coordinate";
+      document.getElementById('country-name').innerText = data.country || "Earth";
+      document.getElementById('timezone-badge').innerText = `Timezone: ${data.timezone || "UTC"}`;
+      document.getElementById('map-coords').innerText = `Lat: ${Number(data.latitude).toFixed(4)} • Lon: ${Number(data.longitude).toFixed(4)}`;
+
+      const forecasts = data.forecasts || [];
+      if (forecasts.length === 0) return;
+
+      const current = forecasts[0];
+      const category = current.aqi_category || "Moderate";
+      const theme = AQI_THEMES[category] || AQI_THEMES["Moderate"];
+
+      // 2. Main Numeric Readout
+      document.getElementById('current-pm25').innerText = Math.round(current.predicted_pm2_5);
+      
+      const categoryBadge = document.getElementById('aqi-category-badge');
+      categoryBadge.className = `px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`;
+      categoryBadge.innerText = category;
+
+      // Glow color
+      document.getElementById('hero-glow').style.background = theme.color;
+
+      // Advisory
+      document.getElementById('advisory-title').innerText = theme.advisoryTitle;
+      document.getElementById('advisory-text').innerText = theme.advisoryText;
+
+      // 3. Weather metrics
+      const weather = data.current_weather || {};
+      document.getElementById('weather-temp').innerText = `${Math.round(weather.temperature_2m || 0)}°C`;
+      document.getElementById('weather-humidity').innerText = `${Math.round(weather.relative_humidity_2m || 0)}%`;
+      document.getElementById('weather-wind').innerText = `${(weather.wind_speed_10m || 0).toFixed(1)} km/h`;
+      
+      const windDir = Math.round(weather.wind_direction_10m || 0);
+      document.getElementById('weather-wind-dir').innerText = `${windDir}°`;
+
+      const vent = Math.round(((weather.temperature_2m || 0) + 273.15) * (weather.wind_speed_10m || 0));
+      document.getElementById('weather-ventilation').innerText = vent.toLocaleString();
+
+      // Pollutants
+      document.getElementById('pollutant-pm10').innerText = Math.round(weather.pm10 || 0);
+      document.getElementById('pollutant-no2').innerText = Math.round(weather.nitrogen_dioxide || 0);
+      document.getElementById('pollutant-o3').innerText = Math.round(weather.ozone || 0);
+      document.getElementById('pollutant-co').innerText = Math.round(weather.carbon_monoxide || 0);
+
+      // 4. Update Map Location & Pulsing Pin
+      if (map && data.latitude && data.longitude) {
+        map.flyTo([data.latitude, data.longitude], 8, { duration: 1.5 });
+
+        if (currentMarker) {
+          map.removeLayer(currentMarker);
+        }
+
+        const pulseIcon = L.divIcon({
+          className: 'custom-pulse',
+          html: `<div class="pulse-marker" style="background-color: ${theme.color}; color: ${theme.color};"></div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+
+        currentMarker = L.marker([data.latitude, data.longitude], { icon: pulseIcon }).addTo(map);
+        currentMarker.bindPopup(`
+          <div class="p-1 text-center">
+            <h4 class="font-bold text-sm text-white">${data.city}</h4>
+            <div class="text-xs font-mono mt-1" style="color: ${theme.color}; font-weight: bold;">
+              ${Math.round(current.predicted_pm2_5)} µg/m³ • ${category}
+            </div>
+          </div>
+        `).openPopup();
+      }
+
+      // 5. Chart Render
+      renderChart(forecasts, theme);
+    }
+
+    function renderChart(forecasts, theme) {
+      const ctx = document.getElementById('forecastChart').getContext('2d');
+
+      const labels = forecasts.map(f => {
+        const parts = f.timestamp.split(' ');
+        if (parts.length > 1) {
+          return parts[1].substring(0, 5); // "HH:MM"
+        }
+        return f.timestamp;
+      });
+
+      const values = forecasts.map(f => f.predicted_pm2_5);
+
+      if (forecastChart) {
+        forecastChart.destroy();
+      }
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, theme.chartFill);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+
+      forecastChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Predicted PM2.5 (µg/m³)',
+            data: values,
+            borderColor: theme.chartBorder,
+            borderWidth: 3,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.42,
+            pointBackgroundColor: '#0F172A',
+            pointBorderColor: theme.chartBorder,
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0F172A',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+              bodyFont: { family: 'JetBrains Mono' },
+              padding: 12,
+              displayColors: false,
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed.y;
+                  let cat = "Good";
+                  if (val > 250) cat = "Severe";
+                  else if (val > 120) cat = "Very Poor";
+                  else if (val > 90) cat = "Poor";
+                  else if (val > 60) cat = "Moderate";
+                  else if (val > 30) cat = "Satisfactory";
+                  return ` ${val.toFixed(1)} µg/m³ • [${cat}]`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+              ticks: { color: '#64748B', font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+              ticks: {
+                color: '#64748B',
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: function(value) { return value + ' µg'; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function selectCity(cityName, lat, lon) {
+      document.querySelectorAll('.city-pill').forEach(btn => {
+        if (btn.innerText.trim().toLowerCase() === cityName.toLowerCase()) {
+          btn.className = "city-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition-all";
+        } else {
+          btn.className = "city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all";
+        }
+      });
+
+      if (lat && lon && map) {
+        map.flyTo([lat, lon], 8, { duration: 1.5 });
+      }
+      fetchForecast(cityName);
+    }
+
+    function handleSearch(e) {
+      e.preventDefault();
+      const input = document.getElementById('city-input');
+      const val = input.value.trim();
+      if (val) {
+        document.querySelectorAll('.city-pill').forEach(btn => {
+          btn.className = "city-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all";
+        });
+        fetchForecast(val);
+        input.value = '';
+      }
+    }
+
+    // Initialize map and default city on boot
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      fetchForecast('Delhi');
+    });
+  </script>
+</body>
+</html>

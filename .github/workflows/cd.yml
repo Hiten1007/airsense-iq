@@ -1,0 +1,52 @@
+name: CD - Package & Deploy Service
+
+on:
+  push:
+    paths:
+      - "models/champion/**"
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: actions/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: actions/docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: actions/docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/aqi-predictor
+        tags: |
+          type=raw,value=latest
+          type=sha
+
+    - name: Build and push Docker image
+      uses: actions/docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Deployment Hook (e.g., Render / Hugging Face Spaces webhook)
+      if: env.DEPLOY_HOOK_URL != ''
+      env:
+        DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+      run: |
+        echo "Triggering cloud deployment webhook..."
+        curl -X POST "$DEPLOY_HOOK_URL"

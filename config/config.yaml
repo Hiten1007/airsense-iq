@@ -1,0 +1,86 @@
+city:
+  name: "Delhi"
+  latitude: 28.6139
+  longitude: 77.2090
+  timezone: "Asia/Kolkata"
+
+preset_cities:
+  - name: "Delhi"
+    country: "India"
+    latitude: 28.6139
+    longitude: 77.2090
+    timezone: "Asia/Kolkata"
+  - name: "Mumbai"
+    country: "India"
+    latitude: 19.0728
+    longitude: 72.8826
+    timezone: "Asia/Kolkata"
+  - name: "Bengaluru"
+    country: "India"
+    latitude: 12.9716
+    longitude: 77.5946
+    timezone: "Asia/Kolkata"
+  - name: "London"
+    country: "United Kingdom"
+    latitude: 51.5074
+    longitude: -0.1278
+    timezone: "Europe/London"
+  - name: "New York"
+    country: "United States"
+    latitude: 40.7128
+    longitude: -74.0060
+    timezone: "America/New_York"
+  - name: "Tokyo"
+    country: "Japan"
+    latitude: 35.6762
+    longitude: 139.6503
+    timezone: "Asia/Tokyo"
+
+data:
+  historical_days: 365
+  test_days: 30
+  target_column: "pm2_5"
+  pollutant_variables:
+    - "pm2_5"
+    - "pm10"
+    - "nitrogen_dioxide"
+    - "sulphur_dioxide"
+    - "ozone"
+    - "carbon_monoxide"
+  weather_variables:
+    - "temperature_2m"
+    - "relative_humidity_2m"
+    - "precipitation"
+    - "surface_pressure"
+    - "wind_speed_10m"
+    - "wind_direction_10m"
+  raw_data_path: "data/raw/aqi_data.csv"
+  processed_data_path: "data/processed/featured_data.csv"
+
+features:
+  lags: [1, 2, 3, 6, 12, 24]
+  rolling_windows: [6, 12, 24]
+
+model:
+  name: "lightgbm_regressor"
+  params:
+    n_estimators: 200
+    learning_rate: 0.05
+    max_depth: 6
+    num_leaves: 31
+    random_state: 42
+    n_jobs: -1
+  model_dir: "models"
+  champion_model_path: "models/champion/model.joblib"
+  candidate_model_path: "models/candidate_model.joblib"
+  metrics_path: "models/metrics.json"
+
+gate:
+  min_r2: 0.60
+  max_rmse: 50.0
+  max_r2_drop_tolerance: 0.03 # challenger r2 must not drop by more than 0.03 compared to champion
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  predictions_output_path: "data/latest_predictions.json"

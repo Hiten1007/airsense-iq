@@ -1,0 +1,67 @@
+name: CT - Continuous Training & Evaluation Gate
+
+on:
+  schedule:
+    # Run every Sunday at midnight UTC
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      force_promote:
+        description: "Force candidate promotion regardless of previous champion"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  train-and-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Ingest Fresh Data & Train Candidate Model
+      run: |
+        python src/data_loader.py
+        python src/train.py
+
+    - name: Run Champion vs. Challenger Quality Gate
+      id: gate
+      run: |
+        python src/gate.py
+
+    - name: Generate Fresh Forecast Artifact
+      if: success()
+      run: |
+        python src/predict.py
+
+    - name: Archive Model Artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: champion-model-artifacts
+        path: |
+          models/champion/model.joblib
+          models/champion/metrics.json
+          models/feature_names.json
+          data/latest_predictions.json
+
+    - name: Commit & Push Promoted Champion Model
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action [CT Bot]"
+        git add models/champion/ models/feature_names.json data/latest_predictions.json
+        git diff --staged --quiet || git commit -m "chore(mlops): promote newly verified champion model [skip ci]"
+        git push
