@@ -3,6 +3,7 @@ import sys
 import json
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -17,6 +18,15 @@ app = FastAPI(
     title="AirSense IQ Air Quality (AQI) CI/CD & MLOps Service",
     description="Production-grade geospatial air quality forecasting service powered by LightGBM and ECMWF reanalysis.",
     version="1.0.0"
+)
+
+# Enable CORS for cross-origin requests from GitHub Pages and frontends
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

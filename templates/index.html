@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AirSense IQ • Urban Air Quality Intelligence & MLOps</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310B981'><path d='M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -478,25 +479,123 @@
       });
     }
 
+    const BACKEND_API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('onrender.com'))
+      ? ''
+      : 'https://airsense-iq-le3j.onrender.com';
+
     async function fetchForecast(cityName = "Delhi") {
+      // 1. Try Render / Local API
       try {
-        const response = await fetch(`/forecast/next24h?city=${encodeURIComponent(cityName)}`);
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-        const data = await response.json();
-        renderDashboard(data);
+        const response = await fetch(`${BACKEND_API}/forecast/next24h?city=${encodeURIComponent(cityName)}`);
+        if (response.ok) {
+          const data = await response.json();
+          renderDashboard(data);
+          return;
+        }
       } catch (err) {
-        console.error(err);
+        console.warn("Backend API unreachable, using direct Open-Meteo client sync:", err);
       }
+
+      // 2. Resilient Client-Side Fallback directly from Open-Meteo (CORS enabled)
+      await fetchDirectFromOpenMeteo(cityName);
     }
 
     async function fetchForecastByCoords(lat, lon) {
       try {
-        const response = await fetch(`/forecast/next24h?lat=${lat}&lon=${lon}`);
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-        const data = await response.json();
-        renderDashboard(data);
+        const response = await fetch(`${BACKEND_API}/forecast/next24h?lat=${lat}&lon=${lon}`);
+        if (response.ok) {
+          const data = await response.json();
+          renderDashboard(data);
+          return;
+        }
       } catch (err) {
-        console.error(err);
+        console.warn("Backend API unreachable, using direct Open-Meteo client sync:", err);
+      }
+
+      await fetchDirectByCoords(lat, lon);
+    }
+
+    async function fetchDirectFromOpenMeteo(cityName) {
+      try {
+        let lat = 28.6139, lon = 77.2090, country = "India", tz = "Asia/Kolkata";
+        const matched = PRESET_LOCATIONS.find(l => l.name.toLowerCase() === cityName.toLowerCase());
+
+        if (matched) {
+          lat = matched.lat;
+          lon = matched.lon;
+        } else {
+          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`);
+          const geoData = await geoRes.json();
+          if (geoData.results && geoData.results.length > 0) {
+            lat = geoData.results[0].latitude;
+            lon = geoData.results[0].longitude;
+            country = geoData.results[0].country || "";
+            tz = geoData.results[0].timezone || "UTC";
+          }
+        }
+        await fetchDirectByCoords(lat, lon, cityName, country, tz);
+      } catch (err) {
+        console.error("Direct Open-Meteo fetch error:", err);
+      }
+    }
+
+    async function fetchDirectByCoords(lat, lon, cityName = null, country = "Earth", tz = "UTC") {
+      try {
+        const name = cityName || `Loc (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+        const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm2_5,pm10,nitrogen_dioxide,ozone,carbon_monoxide&past_days=1&forecast_days=1&timezone=auto`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&past_days=1&forecast_days=1&timezone=auto`;
+
+        const [aqRes, weatherRes] = await Promise.all([
+          fetch(aqUrl).then(r => r.json()),
+          fetch(weatherUrl).then(r => r.json())
+        ]);
+
+        const times = aqRes.hourly.time;
+        const pm25s = aqRes.hourly.pm2_5;
+        const total = times.length;
+        const startIdx = Math.max(0, total - 24);
+
+        const forecasts = [];
+        for (let i = startIdx; i < total; i++) {
+          const val = pm25s[i] !== null ? pm25s[i] : 45.0;
+          let cat = "Good";
+          if (val > 250) cat = "Severe";
+          else if (val > 120) cat = "Very Poor";
+          else if (val > 90) cat = "Poor";
+          else if (val > 60) cat = "Moderate";
+          else if (val > 30) cat = "Satisfactory";
+
+          forecasts.push({
+            timestamp: times[i].replace('T', ' '),
+            predicted_pm2_5: Math.round(val * 10) / 10,
+            aqi_category: cat
+          });
+        }
+
+        const currIdx = total - 25 >= 0 ? total - 25 : total - 1;
+        const payload = {
+          city: name,
+          country: country,
+          latitude: lat,
+          longitude: lon,
+          timezone: aqRes.timezone || tz,
+          generated_at: new Date().toISOString(),
+          current_weather: {
+            temperature_2m: weatherRes.hourly.temperature_2m[currIdx] || 25,
+            relative_humidity_2m: weatherRes.hourly.relative_humidity_2m[currIdx] || 50,
+            wind_speed_10m: weatherRes.hourly.wind_speed_10m[currIdx] || 5,
+            wind_direction_10m: weatherRes.hourly.wind_direction_10m[currIdx] || 180,
+            pm10: aqRes.hourly.pm10 ? aqRes.hourly.pm10[currIdx] : 60,
+            nitrogen_dioxide: aqRes.hourly.nitrogen_dioxide ? aqRes.hourly.nitrogen_dioxide[currIdx] : 20,
+            ozone: aqRes.hourly.ozone ? aqRes.hourly.ozone[currIdx] : 40,
+            carbon_monoxide: aqRes.hourly.carbon_monoxide ? aqRes.hourly.carbon_monoxide[currIdx] : 500
+          },
+          forecasts: forecasts
+        };
+
+        renderDashboard(payload);
+      } catch (err) {
+        console.error("Client-side direct fetch failed:", err);
       }
     }
 
