@@ -714,12 +714,6 @@
           },
           forecasts: forecasts
         };
-            nitrogen_dioxide: aqRes.hourly.nitrogen_dioxide ? aqRes.hourly.nitrogen_dioxide[currIdx] : 20,
-            ozone: aqRes.hourly.ozone ? aqRes.hourly.ozone[currIdx] : 40,
-            carbon_monoxide: aqRes.hourly.carbon_monoxide ? aqRes.hourly.carbon_monoxide[currIdx] : 500
-          },
-          forecasts: forecasts
-        };
 
         renderDashboard(payload);
       } catch (err) {
