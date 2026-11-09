@@ -262,8 +262,8 @@ def generate_live_forecast(
         "latitude": city_info["latitude"],
         "longitude": city_info["longitude"],
         "hourly": ",".join(data_cfg["pollutant_variables"]),
-        "past_days": 2,
-        "forecast_days": 1,
+        "past_days": 1,
+        "forecast_days": 2,
         "timezone": city_info.get("timezone", "Asia/Kolkata")
     }
 
@@ -272,8 +272,8 @@ def generate_live_forecast(
         "latitude": city_info["latitude"],
         "longitude": city_info["longitude"],
         "hourly": ",".join(data_cfg["weather_variables"]),
-        "past_days": 2,
-        "forecast_days": 1,
+        "past_days": 1,
+        "forecast_days": 2,
         "timezone": city_info.get("timezone", "Asia/Kolkata")
     }
 
@@ -303,8 +303,16 @@ def generate_live_forecast(
         merged = pd.merge(aq_df, weather_df, on="time", how="inner")
         merged["time"] = pd.to_datetime(merged["time"])
 
-        # Extract current weather conditions (latest timestamp)
-        latest_row = merged.iloc[-25] if len(merged) >= 25 else merged.iloc[-1]
+        # Locate exact current hour in city local timezone
+        city_tz = city_info.get("timezone", "Asia/Kolkata")
+        try:
+            now_ts = pd.Timestamp.now(tz=city_tz).tz_localize(None)
+        except Exception:
+            now_ts = pd.Timestamp.now()
+
+        diffs = (merged["time"] - now_ts).abs()
+        current_idx = int(diffs.idxmin())
+        latest_row = merged.iloc[current_idx]
         current_metrics = {
             "temperature_2m": float(latest_row.get("temperature_2m", 0.0)),
             "relative_humidity_2m": float(latest_row.get("relative_humidity_2m", 0.0)),
@@ -317,8 +325,11 @@ def generate_live_forecast(
             "carbon_monoxide": float(latest_row.get("carbon_monoxide", 0.0)),
         }
 
-        predictions = predict_from_dataframe(merged, config_path, timezone=city_info.get("timezone", "Asia/Kolkata"))
-        forecast_24h = predictions[-24:]
+        predictions = predict_from_dataframe(merged, config_path, timezone=city_tz)
+        # Dynamic 24-hour moving window centered on NOW: 12h past observations + current hour + 12h forecast
+        start_idx = max(0, current_idx - 12)
+        end_idx = min(len(predictions), current_idx + 13)
+        forecast_24h = predictions[start_idx:end_idx]
 
         # Multi-pollutant overall AQI
         live_pollutants = {
