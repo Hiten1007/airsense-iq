@@ -44,4 +44,5 @@ def test_forecast_endpoint_structure():
         assert len(data["forecasts"]) > 0
         first_item = data["forecasts"][0]
         assert "predicted_pm2_5" in first_item
+        assert "predicted_aqi" in first_item
         assert "aqi_category" in first_item

@@ -216,12 +216,24 @@
             </span>
           </div>
 
-          <!-- Main PM2.5 Readout -->
-          <div class="pt-2">
-            <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 block">Next-Hour Predicted &mu;g/m&sup3; PM<sub>2.5</sub></span>
-            <div class="flex items-baseline gap-3 mt-1">
-              <span id="current-pm25" class="text-6xl sm:text-7xl font-extrabold font-mono tracking-tighter text-white">--</span>
-              <span class="text-sm font-mono text-slate-400">&mu;g/m&sup3;</span>
+          <!-- Main AQI & PM2.5 Readout -->
+          <div class="pt-2 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 block flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Predicted Air Quality Index (AQI)
+              </span>
+              <div class="flex items-baseline gap-3 mt-1">
+                <span id="current-aqi" class="text-6xl sm:text-7xl font-extrabold font-mono tracking-tighter text-white">--</span>
+                <span class="text-xs font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">0–500 Index</span>
+              </div>
+            </div>
+            
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-3 sm:px-4 sm:py-2.5 text-left sm:text-right">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Atmospheric PM<sub>2.5</sub></span>
+              <div class="flex sm:justify-end items-baseline gap-1.5 mt-0.5">
+                <span id="current-pm25" class="text-2xl font-extrabold font-mono text-white">--</span>
+                <span class="text-xs font-mono text-slate-400">&mu;g/m&sup3;</span>
+              </div>
             </div>
           </div>
 
@@ -466,6 +478,38 @@
       });
     }
 
+    const CPCB_PM25_BP = [
+      [0.0, 30.0, 0, 50],
+      [30.1, 60.0, 51, 100],
+      [60.1, 90.0, 101, 200],
+      [90.1, 120.0, 201, 300],
+      [120.1, 250.0, 301, 400],
+      [250.1, 380.0, 401, 500]
+    ];
+
+    function calculateSubIndex(cp, bpTable, decimals = 1) {
+      const scale = Math.pow(10, decimals);
+      const c = Math.floor(Math.max(0, Number(cp) || 0) * scale) / scale;
+
+      for (const [bpLo, bpHi, iLo, iHi] of bpTable) {
+        if (c >= bpLo && c <= bpHi) {
+          const slope = (iHi - iLo) / (bpHi - bpLo);
+          return Math.round(slope * (c - bpLo) + iLo);
+        }
+      }
+
+      const [bpLo, bpHi, iLo, iHi] = bpTable[bpTable.length - 1];
+      if (c > bpHi) {
+        const slope = (iHi - iLo) / (bpHi - bpLo);
+        return Math.min(500, Math.round(slope * (c - bpLo) + iLo));
+      }
+      return 0;
+    }
+
+    function pm25ToAQI(pm25) {
+      return calculateSubIndex(pm25, CPCB_PM25_BP, 1);
+    }
+
     const BACKEND_API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('onrender.com'))
       ? ''
       : 'https://airsense-iq-le3j.onrender.com';
@@ -601,11 +645,15 @@
           }
 
           predictedVal = Math.round(predictedVal * 10) / 10;
+          const aqiVal = pm25ToAQI(predictedVal);
+          const obsAqi = (isPast && rawVal !== null) ? pm25ToAQI(rawVal) : null;
 
           forecasts.push({
             timestamp: tStr,
             predicted_pm2_5: predictedVal,
+            predicted_aqi: aqiVal,
             observed_pm2_5: observedVal,
+            observed_aqi: obsAqi,
             aqi_category: cat
           });
         }
@@ -652,6 +700,12 @@
       const theme = AQI_THEMES[category] || AQI_THEMES["Moderate"];
 
       // 2. Main Numeric Readout
+      const aqiScore = (current.predicted_aqi !== undefined && current.predicted_aqi !== null)
+        ? current.predicted_aqi
+        : pm25ToAQI(current.predicted_pm2_5);
+
+      const aqiElem = document.getElementById('current-aqi');
+      if (aqiElem) aqiElem.innerText = aqiScore;
       document.getElementById('current-pm25').innerText = Math.round(current.predicted_pm2_5);
       
       const categoryBadge = document.getElementById('aqi-category-badge');
@@ -702,8 +756,11 @@
         currentMarker.bindPopup(`
           <div class="p-1 text-center">
             <h4 class="font-bold text-sm text-white">${data.city}</h4>
-            <div class="text-xs font-mono mt-1" style="color: ${theme.color}; font-weight: bold;">
-              ${Math.round(current.predicted_pm2_5)} µg/m³ • ${category}
+            <div class="text-sm font-mono mt-1" style="color: ${theme.color}; font-weight: bold;">
+              AQI ${aqiScore} • ${category}
+            </div>
+            <div class="text-[10px] font-mono text-slate-400 mt-0.5">
+              PM<sub>2.5</sub>: ${Math.round(current.predicted_pm2_5)} &mu;g/m&sup3;
             </div>
           </div>
         `).openPopup();
@@ -801,15 +858,17 @@
                 label: function(context) {
                   const idx = context.dataIndex;
                   const item = forecasts[idx];
+                  const predAqi = (item.predicted_aqi !== undefined && item.predicted_aqi !== null) ? item.predicted_aqi : pm25ToAQI(item.predicted_pm2_5);
                   if (context.datasetIndex === 0) {
                     const val = item.predicted_pm2_5;
-                    return `  AirSense IQ: ${val.toFixed(1)} µg/m³ (${item.aqi_category || ''})`;
+                    return `  AirSense IQ: AQI ${predAqi} • ${val.toFixed(1)} µg/m³ (${item.aqi_category || ''})`;
                   } else if (context.datasetIndex === 1) {
                     if (item.observed_pm2_5 !== null && item.observed_pm2_5 !== undefined) {
                       const obs = item.observed_pm2_5;
+                      const obsAqi = (item.observed_aqi !== undefined && item.observed_aqi !== null) ? item.observed_aqi : pm25ToAQI(obs);
                       const diff = (item.predicted_pm2_5 - obs).toFixed(1);
                       const sign = diff >= 0 ? `+${diff}` : `${diff}`;
-                      return `  Real Observed: ${obs.toFixed(1)} µg/m³ (Δ ${sign} µg)`;
+                      return `  Real Observed: AQI ${obsAqi} • ${obs.toFixed(1)} µg/m³ (Δ ${sign} µg)`;
                     }
                     return null;
                   }

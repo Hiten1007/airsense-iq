@@ -85,18 +85,143 @@ def predict_from_dataframe(
             except Exception:
                 is_past = False
 
+        pred_val = round(float(pred), 2)
         observed_val = None
+        observed_aqi = None
         if has_target and is_past and pd.notna(row[target_col]):
             observed_val = round(float(row[target_col]), 2)
+            observed_aqi = pm25_to_aqi(observed_val)
 
         results.append({
             "timestamp": time_val,
-            "predicted_pm2_5": round(float(pred), 2),
+            "predicted_pm2_5": pred_val,
+            "predicted_aqi": pm25_to_aqi(pred_val),
             "observed_pm2_5": observed_val,
-            "aqi_category": categorize_pm2_5(float(pred))
+            "observed_aqi": observed_aqi,
+            "aqi_category": categorize_pm2_5(pred_val)
         })
 
     return results
+
+
+# Breakpoint tables formatted as: (BP_Lo, BP_Hi, I_Lo, I_Hi)
+CPCB_PM25_BREAKPOINTS: List[Tuple[float, float, int, int]] = [
+    (0.0, 30.0, 0, 50),
+    (30.1, 60.0, 51, 100),
+    (60.1, 90.0, 101, 200),
+    (90.1, 120.0, 201, 300),
+    (120.1, 250.0, 301, 400),
+    (250.1, 380.0, 401, 500),
+]
+
+CPCB_PM10_BREAKPOINTS: List[Tuple[float, float, int, int]] = [
+    (0.0, 50.0, 0, 50),
+    (51.0, 100.0, 51, 100),
+    (101.0, 250.0, 101, 200),
+    (251.0, 350.0, 201, 300),
+    (351.0, 430.0, 301, 400),
+    (431.0, 510.0, 401, 500),
+]
+
+CPCB_NO2_BREAKPOINTS: List[Tuple[float, float, int, int]] = [
+    (0.0, 40.0, 0, 50),
+    (41.0, 80.0, 51, 100),
+    (81.0, 180.0, 101, 200),
+    (181.0, 280.0, 201, 300),
+    (281.0, 400.0, 301, 400),
+    (401.0, 500.0, 401, 500),
+]
+
+CPCB_O3_BREAKPOINTS: List[Tuple[float, float, int, int]] = [
+    (0.0, 50.0, 0, 50),
+    (51.0, 100.0, 51, 100),
+    (101.0, 168.0, 101, 200),
+    (169.0, 208.0, 201, 300),
+    (209.0, 748.0, 301, 400),
+    (749.0, 1000.0, 401, 500),
+]
+
+CPCB_CO_BREAKPOINTS: List[Tuple[float, float, int, int]] = [
+    (0.0, 1.0, 0, 50),
+    (1.1, 2.0, 51, 100),
+    (2.1, 10.0, 101, 200),
+    (10.1, 17.0, 201, 300),
+    (17.1, 34.0, 301, 400),
+    (34.1, 50.0, 401, 500),
+]
+
+
+def calculate_sub_index(
+    cp: float,
+    bp_table: List[Tuple[float, float, int, int]],
+    decimals: int = 1
+) -> int:
+    """
+    Calculate pollutant sub-index using the standard interpolation formula:
+    I_p = [ (I_Hi - I_Lo) / (BP_Hi - BP_Lo) ] * (C_p - BP_Lo) + I_Lo
+
+    Key rules applied:
+    1. Truncation: C_p is truncated (not rounded) to the defined precision before calculation.
+    2. Slope: (I_Hi - I_Lo) / (BP_Hi - BP_Lo) represents the rate of index increase per unit concentration.
+    3. Rounding: The final sub-index I_p is rounded to the nearest integer.
+    """
+    import math
+    scale = 10.0 ** decimals
+    c = math.floor(max(0.0, float(cp)) * scale) / scale
+
+    for bp_lo, bp_hi, i_lo, i_hi in bp_table:
+        if bp_lo <= c <= bp_hi:
+            slope = (i_hi - i_lo) / (bp_hi - bp_lo)
+            return int(round(slope * (c - bp_lo) + i_lo))
+
+    # Concentration above top breakpoint
+    bp_lo, bp_hi, i_lo, i_hi = bp_table[-1]
+    if c > bp_hi:
+        slope = (i_hi - i_lo) / (bp_hi - bp_lo)
+        return int(round(min(500.0, slope * (c - bp_lo) + i_lo)))
+
+    return 0
+
+
+def pm25_to_aqi(pm2_5: float) -> int:
+    """
+    Calculate PM2.5 sub-index using the official piecewise linear formula
+    with concentration truncated to 1 decimal place.
+    """
+    return calculate_sub_index(pm2_5, CPCB_PM25_BREAKPOINTS, decimals=1)
+
+
+def calculate_overall_aqi(pollutants: Dict[str, float]) -> Dict[str, Any]:
+    """
+    Calculate sub-indices for all available pollutants and determine overall AQI:
+    Overall AQI = max(I_p) across all pollutants.
+    """
+    sub_indices: Dict[str, int] = {}
+    if "pm2_5" in pollutants and pollutants["pm2_5"] is not None:
+        sub_indices["PM2.5"] = pm25_to_aqi(pollutants["pm2_5"])
+    if "pm10" in pollutants and pollutants["pm10"] is not None:
+        sub_indices["PM10"] = calculate_sub_index(pollutants["pm10"], CPCB_PM10_BREAKPOINTS, decimals=0)
+    if "nitrogen_dioxide" in pollutants and pollutants["nitrogen_dioxide"] is not None:
+        sub_indices["NO2"] = calculate_sub_index(pollutants["nitrogen_dioxide"], CPCB_NO2_BREAKPOINTS, decimals=0)
+    if "ozone" in pollutants and pollutants["ozone"] is not None:
+        sub_indices["O3"] = calculate_sub_index(pollutants["ozone"], CPCB_O3_BREAKPOINTS, decimals=0)
+    if "carbon_monoxide" in pollutants and pollutants["carbon_monoxide"] is not None:
+        # CO in mg/m3 (Open-Meteo provides ug/m3, so divide by 1000 if > 50)
+        raw_co = pollutants["carbon_monoxide"]
+        co_mg = raw_co / 1000.0 if raw_co > 50 else raw_co
+        sub_indices["CO"] = calculate_sub_index(co_mg, CPCB_CO_BREAKPOINTS, decimals=1)
+
+    if not sub_indices:
+        return {"overall_aqi": 0, "dominant_pollutant": "PM2.5", "sub_indices": {}}
+
+    dominant = max(sub_indices, key=lambda k: sub_indices[k])
+    overall = sub_indices[dominant]
+
+    return {
+        "overall_aqi": overall,
+        "dominant_pollutant": dominant,
+        "sub_indices": sub_indices
+    }
 
 
 def categorize_pm2_5(pm2_5: float) -> str:
@@ -195,6 +320,16 @@ def generate_live_forecast(
         predictions = predict_from_dataframe(merged, config_path, timezone=city_info.get("timezone", "Asia/Kolkata"))
         forecast_24h = predictions[-24:]
 
+        # Multi-pollutant overall AQI
+        live_pollutants = {
+            "pm2_5": float(latest_row.get("pm2_5", forecast_24h[0]["predicted_pm2_5"] if forecast_24h else 45.0)),
+            "pm10": current_metrics.get("pm10"),
+            "nitrogen_dioxide": current_metrics.get("nitrogen_dioxide"),
+            "ozone": current_metrics.get("ozone"),
+            "carbon_monoxide": current_metrics.get("carbon_monoxide")
+        }
+        overall_aqi_data = calculate_overall_aqi(live_pollutants)
+
         payload = {
             "city": city_info["name"],
             "country": city_info.get("country", ""),
@@ -202,6 +337,9 @@ def generate_live_forecast(
             "longitude": city_info["longitude"],
             "timezone": city_info.get("timezone", "UTC"),
             "generated_at": datetime.now().isoformat(),
+            "overall_aqi": overall_aqi_data["overall_aqi"],
+            "dominant_pollutant": overall_aqi_data["dominant_pollutant"],
+            "pollutant_sub_indices": overall_aqi_data["sub_indices"],
             "current_weather": current_metrics,
             "forecasts": forecast_24h
         }
@@ -237,12 +375,24 @@ def generate_live_forecast(
         for i in range(24):
             t_str = (now + pd.Timedelta(hours=i)).strftime("%Y-%m-%d %H:00:00")
             val = 52.0 + (i % 5) * 3.5
+            obs_pm = round(val - 2.8 + (i % 3), 2) if i < 12 else None
             fallback_forecasts.append({
                 "timestamp": t_str,
                 "predicted_pm2_5": round(val, 2),
-                "observed_pm2_5": round(val - 2.8 + (i % 3), 2) if i < 12 else None,
+                "predicted_aqi": pm25_to_aqi(val),
+                "observed_pm2_5": obs_pm,
+                "observed_aqi": pm25_to_aqi(obs_pm) if obs_pm is not None else None,
                 "aqi_category": categorize_pm2_5(val)
             })
+
+        fallback_pollutants = {
+            "pm2_5": 52.0,
+            "pm10": 68.0,
+            "nitrogen_dioxide": 24.0,
+            "ozone": 42.0,
+            "carbon_monoxide": 510.0
+        }
+        fallback_aqi = calculate_overall_aqi(fallback_pollutants)
 
         return {
             "city": city_info["name"],
@@ -251,6 +401,9 @@ def generate_live_forecast(
             "longitude": city_info["longitude"],
             "timezone": city_info.get("timezone", "UTC"),
             "generated_at": now.isoformat(),
+            "overall_aqi": fallback_aqi["overall_aqi"],
+            "dominant_pollutant": fallback_aqi["dominant_pollutant"],
+            "pollutant_sub_indices": fallback_aqi["sub_indices"],
             "current_weather": {
                 "temperature_2m": 24.0,
                 "relative_humidity_2m": 55.0,

@@ -33,7 +33,9 @@ app.add_middleware(
 class AQIPredictionItem(BaseModel):
     timestamp: str
     predicted_pm2_5: float
+    predicted_aqi: Optional[int] = None
     observed_pm2_5: Optional[float] = None
+    observed_aqi: Optional[int] = None
     aqi_category: str
 
 
@@ -44,6 +46,9 @@ class LiveForecastResponse(BaseModel):
     longitude: float
     timezone: str
     generated_at: str
+    overall_aqi: Optional[int] = None
+    dominant_pollutant: Optional[str] = None
+    pollutant_sub_indices: Optional[Dict[str, int]] = None
     current_weather: Optional[Dict[str, Any]] = None
     forecasts: List[AQIPredictionItem]
 
