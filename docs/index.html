@@ -924,8 +924,12 @@
         id: 'nowLinePlugin',
         afterDraw(chart) {
           if (nowIdx < 0 || nowIdx >= forecasts.length) return;
-          const { ctx: c, chartArea: { top, bottom }, scales: { x } } = chart;
-          const xPos = x.getPixelForIndex(nowIdx);
+          const meta = chart.getDatasetMeta(0);
+          if (!meta || !meta.data || !meta.data[nowIdx]) return;
+
+          const { ctx: c, chartArea: { top, bottom } } = chart;
+          const xPos = meta.data[nowIdx].x;
+          const yPos = meta.data[nowIdx].y;
 
           c.save();
           // 1. Vertical glowing dashed divider
@@ -966,9 +970,7 @@
           c.fillText(label, xPos, by + (bh / 2));
 
           // 3. Glowing radar beacon halo around NOW data point
-          const meta = chart.getDatasetMeta(0);
-          if (meta && meta.data && meta.data[nowIdx]) {
-            const yPos = meta.data[nowIdx].y;
+          if (yPos !== undefined && !isNaN(yPos)) {
             c.beginPath();
             c.arc(xPos, yPos, 11, 0, Math.PI * 2);
             c.strokeStyle = 'rgba(16, 185, 129, 0.55)';
