@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - "models/champion/**"
+      - "src/**"
+      - "templates/**"
+      - "Dockerfile"
+      - "requirements.txt"
     branches:
       - main
   workflow_dispatch:
