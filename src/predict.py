@@ -3,7 +3,7 @@ import sys
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import joblib
 import pandas as pd
 import requests
