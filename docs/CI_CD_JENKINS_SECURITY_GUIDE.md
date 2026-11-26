@@ -101,7 +101,7 @@ Run the included `docker-compose.jenkins.yml`:
 ```bash
 docker compose -f docker-compose.jenkins.yml up -d
 ```
-Access Jenkins at `http://localhost:8080`. Retrieve the initial setup password:
+Access Jenkins at `http://localhost:8088`. Retrieve the initial setup password:
 ```bash
 docker exec -it airsense-jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
