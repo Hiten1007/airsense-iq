@@ -376,6 +376,8 @@
     let globalForecasts = [];
     let globalTheme = null;
     let currentViewMode = 'rolling';
+    let currentActiveCity = 'Delhi';
+    let currentActiveCoords = null;
 
     const PRESET_LOCATIONS = [
       { name: "Delhi", lat: 28.6139, lon: 77.2090 },
@@ -1098,8 +1100,12 @@
         }
       });
 
-      if (lat && lon && map) {
-        map.flyTo([lat, lon], 8, { duration: 1.5 });
+      currentActiveCity = cityName;
+      if (lat && lon) {
+        currentActiveCoords = { lat, lon, name: cityName, country: '', tz: 'auto' };
+        if (map) map.flyTo([lat, lon], 8, { duration: 1.5 });
+      } else {
+        currentActiveCoords = null;
       }
       fetchForecast(cityName);
     }
@@ -1188,10 +1194,25 @@
       }
     }
 
-    // Initialize map and default city on boot
+    // Initialize map, default city, and continuous auto-refresh on boot
     document.addEventListener('DOMContentLoaded', () => {
       initMap();
       fetchForecast('Delhi');
+
+      // Auto-refresh live telemetry every 5 minutes and shift graph hours smoothly
+      setInterval(() => {
+        if (currentActiveCoords) {
+          fetchDirectByCoords(
+            currentActiveCoords.lat,
+            currentActiveCoords.lon,
+            currentActiveCoords.name,
+            currentActiveCoords.country,
+            currentActiveCoords.tz
+          );
+        } else {
+          fetchForecast(currentActiveCity || 'Delhi');
+        }
+      }, 5 * 60 * 1000);
     });
   </script>
 </body>

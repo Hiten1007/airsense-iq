@@ -16,11 +16,11 @@ pipeline {
 
         stage('2. Dependencies & Environment Setup') {
             steps {
-                echo 'Installing Python3 and setting up virtual environment...'
+                echo 'Installing Python3, Docker CLI, and setting up virtual environment...'
                 sh '''
-                    # Install Python3 if not present (Jenkins container is Debian-based)
-                    if ! command -v python3 > /dev/null 2>&1; then
-                        apt-get update -qq && apt-get install -y -qq python3 python3-pip python3-venv
+                    # Install Python3 and Docker CLI if not present (Jenkins container is Debian-based)
+                    if ! command -v python3 > /dev/null 2>&1 || ! command -v docker > /dev/null 2>&1; then
+                        apt-get update -qq && apt-get install -y -qq python3 python3-pip python3-venv docker-cli
                     fi
                     python3 -m venv venv
                     . venv/bin/activate
@@ -37,8 +37,8 @@ pipeline {
                 sh '''
                     . venv/bin/activate
                     echo "--- Flake8 Quality & Syntax Verification ---"
-                    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-                    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+                    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv,build,dist,.git
+                    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=venv,build,dist,.git
 
                     echo "--- Bandit Security Vulnerability Scanner ---"
                     python -m bandit -r src/ -f custom --msg-template "{abspath}:{line}: {test_id}[bandit]: {severity}: {msg}"
@@ -49,11 +49,11 @@ pipeline {
 
         stage('4. Dependency Vulnerability Audit') {
             steps {
-                echo 'Checking requirements.txt against CVE Advisory Databases...'
+                echo 'Checking installed environment dependencies against CVE Advisory Databases...'
                 sh '''
                     . venv/bin/activate
-                    python -m pip_audit -r requirements.txt --format json -o reports/pip-audit-report.json || true
-                    python -m pip_audit -r requirements.txt
+                    python -m pip_audit --local --format json -o reports/pip-audit-report.json || true
+                    python -m pip_audit --local
                 '''
             }
         }
