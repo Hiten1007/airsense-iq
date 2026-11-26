@@ -1,0 +1,51 @@
+name: Hourly Live Telemetry Sync & Server Keep-Alive
+
+on:
+  schedule:
+    # Run at minute 0 of every hour
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-and-ping:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Generate Fresh 24-Hour Live Forecast
+      run: |
+        python src/predict.py
+        # Synchronize latest predictions to docs for GitHub Pages static serving
+        cp data/latest_predictions.json docs/latest_predictions.json
+
+    - name: Ping Free-Tier Render Server (Keep-Alive)
+      run: |
+        echo "Pinging Render backend health endpoint..."
+        curl -s -f -m 20 https://airsense-iq-le3j.onrender.com/health || echo "Render service waking up or sleeping"
+
+    - name: Commit & Push Updated Predictions to GitHub Pages
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add data/latest_predictions.json docs/latest_predictions.json
+        if git diff --staged --quiet; then
+          echo "No new prediction telemetry changes."
+        else
+          git commit -m "chore(telemetry): update hourly live AQI predictions & rolling window [skip ci]"
+          git push
+        fi

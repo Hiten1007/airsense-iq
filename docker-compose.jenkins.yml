@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: airsense-jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Mount Docker socket so Jenkins can build and run Docker containers directly
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+
+volumes:
+  jenkins_home:
+    driver: local

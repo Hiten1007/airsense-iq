@@ -377,8 +377,8 @@ def generate_live_forecast(
                     cached_data["latitude"] = city_info["latitude"]
                     cached_data["longitude"] = city_info["longitude"]
                     return cached_data
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed reading cached prediction file: {e}")
 
         # Robust graceful baseline fallback if external API is rate-limited (429)
         now = datetime.now()

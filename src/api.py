@@ -1,11 +1,14 @@
 import os
 import sys
 import json
+import logging
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+
+logger = logging.getLogger("airsense.api")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -124,8 +127,8 @@ def get_live_24h_forecast(
                 subdiv = rev_resp.get("principalSubdivision")
                 c_name = rev_resp.get("countryName") or ""
                 country_name = f"{subdiv}, {c_name}" if subdiv and subdiv != city_name else c_name or "Earth"
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Reverse geocode lookup bypassed: {e}")
 
             data_cfg = config["data"]
 

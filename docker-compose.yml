@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  airsense-iq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: airsense-iq:latest
+    container_name: airsense-iq-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
