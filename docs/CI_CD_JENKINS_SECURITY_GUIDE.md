@@ -37,7 +37,7 @@ flowchart TD
 
     subgraph JenkinsFreeStack["Live Jenkins Pipeline (Zero Cloud Cost)"]
         GHRepo -->|GitHub Webhook| SmeeProxy["Smee.io Relay / Cloudflare Tunnel (100% Free)"]
-        SmeeProxy -->|Local Webhook| JenkinsLocal["Local/Self-Hosted Jenkins in Docker (:8080)"]
+        SmeeProxy -->|Local Webhook| JenkinsLocal["Local/Self-Hosted Jenkins in Docker (:8088)"]
         JenkinsLocal -->|Pipeline Steps| JP1[Checkout & Venv]
         JP1 --> JP2[Flake8 & Bandit SAST]
         JP2 --> JP3[pip-audit CVE Scan]
@@ -113,9 +113,9 @@ docker exec -it airsense-jenkins cat /var/jenkins_home/secrets/initialAdminPassw
    ```bash
    npm install --global smee-client
    ```
-4. Start the webhook relay forwarding to your local Jenkins:
-   ```bash
-   smee --url https://smee.io/abc123xyz456 --target http://localhost:8080/github-webhook/
+4. Start the webhook relay forwarding to your local Jenkins (include `?smee=1` so `smee-client` v5 preserves the trailing slash required by Jenkins, and `--use-system-ca` on Windows Node.js v22+):
+   ```powershell
+   $env:NODE_OPTIONS="--use-system-ca"; npx smee-client --url https://smee.io/airsense-iq-relay --target "http://localhost:8088/github-webhook/?smee=1"
    ```
 
 **Step 3: Connect GitHub to Smee**
