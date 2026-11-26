@@ -16,10 +16,14 @@ pipeline {
 
         stage('2. Dependencies & Environment Setup') {
             steps {
-                echo 'Setting up Python virtual environment & installing dependencies...'
+                echo 'Installing Python3 and setting up virtual environment...'
                 sh '''
-                    python3 -m venv venv || python -m venv venv
-                    . venv/bin/activate || . venv/Scripts/activate
+                    # Install Python3 if not present (Jenkins container is Debian-based)
+                    if ! command -v python3 > /dev/null 2>&1; then
+                        apt-get update -qq && apt-get install -y -qq python3 python3-pip python3-venv
+                    fi
+                    python3 -m venv venv
+                    . venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
                     mkdir -p reports
@@ -31,7 +35,7 @@ pipeline {
             steps {
                 echo 'Executing Static Application Security Testing (SAST)...'
                 sh '''
-                    . venv/bin/activate || . venv/Scripts/activate
+                    . venv/bin/activate
                     echo "--- Flake8 Quality & Syntax Verification ---"
                     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
                     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
@@ -47,7 +51,7 @@ pipeline {
             steps {
                 echo 'Checking requirements.txt against CVE Advisory Databases...'
                 sh '''
-                    . venv/bin/activate || . venv/Scripts/activate
+                    . venv/bin/activate
                     python -m pip_audit -r requirements.txt --format json -o reports/pip-audit-report.json || true
                     python -m pip_audit -r requirements.txt
                 '''
@@ -58,7 +62,7 @@ pipeline {
             steps {
                 echo 'Running full Pytest test suite...'
                 sh '''
-                    . venv/bin/activate || . venv/Scripts/activate
+                    . venv/bin/activate
                     PYTHONPATH=. pytest -v tests/ --junitxml=reports/test-results.xml
                 '''
             }
