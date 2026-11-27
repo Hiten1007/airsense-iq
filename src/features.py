@@ -92,8 +92,12 @@ def build_feature_pipeline(
     """
     End-to-end feature pipeline execution.
     """
-    # 1. Forward-fill and backward-fill raw missing values
-    processed_df = df.ffill().bfill()
+    # 1. Forward-fill raw missing values only. No bfill: this pipeline runs on the
+    # full train+test timeline before split_train_test_time_series() is called, and
+    # backward-filling here could pull a later (post-split, test-side) observation
+    # into an earlier training row, leaking test data across the holdout boundary.
+    # Any leading NaNs ffill can't reach are removed by the dropna() step below.
+    processed_df = df.ffill()
 
     # 2. Add cyclical time features
     processed_df = add_cyclical_time_features(processed_df, time_col="time")
