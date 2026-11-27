@@ -4,224 +4,224 @@
   "latitude": 28.6139,
   "longitude": 77.209,
   "timezone": "Asia/Kolkata",
-  "generated_at": "2026-11-27T01:34:51.822717",
-  "overall_aqi": 362,
+  "generated_at": "2026-11-27T17:28:37.076444",
+  "overall_aqi": 410,
   "dominant_pollutant": "PM2.5",
   "pollutant_sub_indices": {
-    "PM2.5": 362,
-    "PM10": 168,
-    "NO2": 84,
+    "PM2.5": 410,
+    "PM10": 212,
+    "NO2": 154,
     "O3": 0,
-    "CO": 107
+    "CO": 140
   },
   "current_weather": {
-    "temperature_2m": 13.0,
-    "relative_humidity_2m": 71.0,
-    "wind_speed_10m": 2.0,
-    "wind_direction_10m": 243.0,
-    "surface_pressure": 994.3,
-    "pm10": 202.6,
-    "nitrogen_dioxide": 67.1,
+    "temperature_2m": 16.7,
+    "relative_humidity_2m": 67.0,
+    "wind_speed_10m": 2.8,
+    "wind_direction_10m": 75.0,
+    "surface_pressure": 995.2,
+    "pm10": 262.6,
+    "nitrogen_dioxide": 134.9,
     "ozone": 0.0,
-    "carbon_monoxide": 2645.0
+    "carbon_monoxide": 5221.0
   },
   "forecasts": [
     {
-      "timestamp": "2026-11-26 19:00:00",
-      "predicted_pm2_5": 125.51,
-      "predicted_aqi": 305,
-      "observed_pm2_5": 123.9,
-      "observed_aqi": 304,
+      "timestamp": "2026-11-27 11:00:00",
+      "predicted_pm2_5": 107.15,
+      "predicted_aqi": 257,
+      "observed_pm2_5": 112.2,
+      "observed_aqi": 274,
+      "aqi_category": "Poor"
+    },
+    {
+      "timestamp": "2026-11-27 12:00:00",
+      "predicted_pm2_5": 86.12,
+      "predicted_aqi": 187,
+      "observed_pm2_5": 85.7,
+      "observed_aqi": 186,
+      "aqi_category": "Moderate"
+    },
+    {
+      "timestamp": "2026-11-27 13:00:00",
+      "predicted_pm2_5": 67.71,
+      "predicted_aqi": 126,
+      "observed_pm2_5": 71.5,
+      "observed_aqi": 139,
+      "aqi_category": "Moderate"
+    },
+    {
+      "timestamp": "2026-11-27 14:00:00",
+      "predicted_pm2_5": 63.39,
+      "predicted_aqi": 112,
+      "observed_pm2_5": 65.7,
+      "observed_aqi": 120,
+      "aqi_category": "Moderate"
+    },
+    {
+      "timestamp": "2026-11-27 15:00:00",
+      "predicted_pm2_5": 64.23,
+      "predicted_aqi": 115,
+      "observed_pm2_5": 64.5,
+      "observed_aqi": 116,
+      "aqi_category": "Moderate"
+    },
+    {
+      "timestamp": "2026-11-27 16:00:00",
+      "predicted_pm2_5": 81.94,
+      "predicted_aqi": 173,
+      "observed_pm2_5": 82.9,
+      "observed_aqi": 176,
+      "aqi_category": "Moderate"
+    },
+    {
+      "timestamp": "2026-11-27 17:00:00",
+      "predicted_pm2_5": 130.27,
+      "predicted_aqi": 309,
+      "observed_pm2_5": 119.7,
+      "observed_aqi": 299,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-26 20:00:00",
-      "predicted_pm2_5": 132.79,
-      "predicted_aqi": 311,
-      "observed_pm2_5": 138.3,
-      "observed_aqi": 315,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-26 21:00:00",
-      "predicted_pm2_5": 148.31,
+      "timestamp": "2026-11-27 18:00:00",
+      "predicted_pm2_5": 147.02,
       "predicted_aqi": 322,
-      "observed_pm2_5": 149.5,
-      "observed_aqi": 323,
+      "observed_pm2_5": 155.1,
+      "observed_aqi": 328,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-26 22:00:00",
-      "predicted_pm2_5": 158.06,
-      "predicted_aqi": 330,
-      "observed_pm2_5": 157.9,
-      "observed_aqi": 330,
+      "timestamp": "2026-11-27 19:00:00",
+      "predicted_pm2_5": 185.08,
+      "predicted_aqi": 350,
+      "observed_pm2_5": 186.3,
+      "observed_aqi": 351,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-26 23:00:00",
-      "predicted_pm2_5": 162.43,
-      "predicted_aqi": 333,
-      "observed_pm2_5": 161.1,
-      "observed_aqi": 332,
+      "timestamp": "2026-11-27 20:00:00",
+      "predicted_pm2_5": 214.78,
+      "predicted_aqi": 373,
+      "observed_pm2_5": 213.3,
+      "observed_aqi": 372,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 00:00:00",
-      "predicted_pm2_5": 157.04,
-      "predicted_aqi": 329,
-      "observed_pm2_5": 160.2,
-      "observed_aqi": 332,
+      "timestamp": "2026-11-27 21:00:00",
+      "predicted_pm2_5": 236.93,
+      "predicted_aqi": 390,
+      "observed_pm2_5": 236.1,
+      "observed_aqi": 389,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 01:00:00",
-      "predicted_pm2_5": 156.74,
-      "predicted_aqi": 329,
-      "observed_pm2_5": 159.7,
-      "observed_aqi": 331,
+      "timestamp": "2026-11-27 22:00:00",
+      "predicted_pm2_5": 247.95,
+      "predicted_aqi": 398,
+      "observed_pm2_5": 254.3,
+      "observed_aqi": 404,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 02:00:00",
-      "predicted_pm2_5": 156.26,
-      "predicted_aqi": 329,
-      "observed_pm2_5": 161.1,
-      "observed_aqi": 332,
+      "timestamp": "2026-11-27 23:00:00",
+      "predicted_pm2_5": 280.04,
+      "predicted_aqi": 424,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
+      "aqi_category": "Severe"
+    },
+    {
+      "timestamp": "2026-11-28 00:00:00",
+      "predicted_pm2_5": 275.71,
+      "predicted_aqi": 421,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
+      "aqi_category": "Severe"
+    },
+    {
+      "timestamp": "2026-11-28 01:00:00",
+      "predicted_pm2_5": 273.68,
+      "predicted_aqi": 419,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
+      "aqi_category": "Severe"
+    },
+    {
+      "timestamp": "2026-11-28 02:00:00",
+      "predicted_pm2_5": 239.58,
+      "predicted_aqi": 392,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 03:00:00",
-      "predicted_pm2_5": 157.37,
-      "predicted_aqi": 329,
-      "observed_pm2_5": 162.5,
-      "observed_aqi": 333,
+      "timestamp": "2026-11-28 03:00:00",
+      "predicted_pm2_5": 228.75,
+      "predicted_aqi": 384,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 04:00:00",
-      "predicted_pm2_5": 157.52,
-      "predicted_aqi": 330,
-      "observed_pm2_5": 163.9,
-      "observed_aqi": 334,
+      "timestamp": "2026-11-28 04:00:00",
+      "predicted_pm2_5": 222.7,
+      "predicted_aqi": 379,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 05:00:00",
-      "predicted_pm2_5": 161.46,
-      "predicted_aqi": 332,
-      "observed_pm2_5": 166.2,
-      "observed_aqi": 336,
+      "timestamp": "2026-11-28 05:00:00",
+      "predicted_pm2_5": 216.25,
+      "predicted_aqi": 374,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 06:00:00",
-      "predicted_pm2_5": 177.0,
-      "predicted_aqi": 344,
-      "observed_pm2_5": 175.6,
-      "observed_aqi": 343,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-27 07:00:00",
-      "predicted_pm2_5": 192.15,
-      "predicted_aqi": 356,
-      "observed_pm2_5": 200.7,
-      "observed_aqi": 362,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-27 08:00:00",
-      "predicted_pm2_5": 217.86,
+      "timestamp": "2026-11-28 06:00:00",
+      "predicted_pm2_5": 217.52,
       "predicted_aqi": 375,
       "observed_pm2_5": null,
       "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 09:00:00",
-      "predicted_pm2_5": 188.95,
-      "predicted_aqi": 353,
+      "timestamp": "2026-11-28 07:00:00",
+      "predicted_pm2_5": 227.79,
+      "predicted_aqi": 383,
       "observed_pm2_5": null,
       "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 10:00:00",
-      "predicted_pm2_5": 156.17,
-      "predicted_aqi": 328,
+      "timestamp": "2026-11-28 08:00:00",
+      "predicted_pm2_5": 232.94,
+      "predicted_aqi": 387,
       "observed_pm2_5": null,
       "observed_aqi": null,
       "aqi_category": "Very Poor"
     },
     {
-      "timestamp": "2026-11-27 11:00:00",
-      "predicted_pm2_5": 122.32,
+      "timestamp": "2026-11-28 09:00:00",
+      "predicted_pm2_5": 199.43,
+      "predicted_aqi": 361,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
+      "aqi_category": "Very Poor"
+    },
+    {
+      "timestamp": "2026-11-28 10:00:00",
+      "predicted_pm2_5": 154.37,
+      "predicted_aqi": 327,
+      "observed_pm2_5": null,
+      "observed_aqi": null,
+      "aqi_category": "Very Poor"
+    },
+    {
+      "timestamp": "2026-11-28 11:00:00",
+      "predicted_pm2_5": 122.27,
       "predicted_aqi": 303,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-27 12:00:00",
-      "predicted_pm2_5": 99.31,
-      "predicted_aqi": 231,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Poor"
-    },
-    {
-      "timestamp": "2026-11-27 13:00:00",
-      "predicted_pm2_5": 69.1,
-      "predicted_aqi": 131,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Moderate"
-    },
-    {
-      "timestamp": "2026-11-27 14:00:00",
-      "predicted_pm2_5": 63.2,
-      "predicted_aqi": 111,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Moderate"
-    },
-    {
-      "timestamp": "2026-11-27 15:00:00",
-      "predicted_pm2_5": 62.53,
-      "predicted_aqi": 109,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Moderate"
-    },
-    {
-      "timestamp": "2026-11-27 16:00:00",
-      "predicted_pm2_5": 76.02,
-      "predicted_aqi": 154,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Moderate"
-    },
-    {
-      "timestamp": "2026-11-27 17:00:00",
-      "predicted_pm2_5": 129.59,
-      "predicted_aqi": 308,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-27 18:00:00",
-      "predicted_pm2_5": 141.16,
-      "predicted_aqi": 317,
-      "observed_pm2_5": null,
-      "observed_aqi": null,
-      "aqi_category": "Very Poor"
-    },
-    {
-      "timestamp": "2026-11-27 19:00:00",
-      "predicted_pm2_5": 178.15,
-      "predicted_aqi": 345,
       "observed_pm2_5": null,
       "observed_aqi": null,
       "aqi_category": "Very Poor"
