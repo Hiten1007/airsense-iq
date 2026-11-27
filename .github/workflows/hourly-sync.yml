@@ -2,8 +2,8 @@ name: Hourly Live Telemetry Sync & Server Keep-Alive
 
 on:
   schedule:
-    # Run at minute 0 of every hour
-    - cron: "0 * * * *"
+    # Run at minute 17 of every hour to avoid GitHub's :00 queue congestion
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 jobs:
